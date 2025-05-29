@@ -9,9 +9,9 @@ internal sealed class AppSettings
 {
     public string DaikinFtxm25IpAddress { get; set; }
     public string P1MeterIpAddress { get; set; }
-    public string SunnyBoyIpAddress { get; set; }
-    public UserType SunnyBoyUser { get; set; }
-    public string SunnyBoyPass { get; set; }
+    public string SmaSunnyBoyIpAddress { get; set; }
+    public UserType SmaSunnyBoyUser { get; set; }
+    public string SmaSunnyBoyPass { get; set; }
 
     public AppSettings(IConfiguration config)
     {
@@ -19,9 +19,9 @@ internal sealed class AppSettings
         {
             config.Bind(this);
 
-            if (string.IsNullOrWhiteSpace(SunnyBoyPass))
+            if (string.IsNullOrWhiteSpace(SmaSunnyBoyPass))
             {
-                throw new Exception($"{nameof(SunnyBoyPass)} can not be null or empty. Please check the app settings file.");
+                throw new Exception($"{nameof(SmaSunnyBoyPass)} can not be null or empty. Please check the app settings file.");
             }
         }
         catch (Exception ex)

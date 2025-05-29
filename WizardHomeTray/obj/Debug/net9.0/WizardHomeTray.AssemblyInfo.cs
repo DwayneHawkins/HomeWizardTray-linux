@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("WizardHomeTray")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3d340d461bff28318d5dbc77571e0abc738dc8d2")]
 [assembly: System.Reflection.AssemblyProductAttribute("WizardHomeTray")]
 [assembly: System.Reflection.AssemblyTitleAttribute("WizardHomeTray")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

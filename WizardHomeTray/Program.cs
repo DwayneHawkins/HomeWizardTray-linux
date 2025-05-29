@@ -20,11 +20,9 @@ internal static class Program
         try
         {
             Log.Information("Building app config.");
+            var config = new ConfigurationBuilder().AddJsonFile("appsettings.json", false).Build();
 
-            var config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", false)
-                .Build();
-
+            Log.Information("Building app host and DI container.");
             var host = Host
                 .CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
@@ -55,10 +53,10 @@ internal static class Program
                 })
                 .Build();
 
-            Log.Information("Running app.");
+            Log.Information("Starting app.");
             Gtk.Application.Init();
             var app = host.Services.GetRequiredService<App>();
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => { Log.Information("Application process exiting."); };
+            AppDomain.CurrentDomain.ProcessExit += (s, e) => { Log.Information("Exiting app."); };
             Gtk.Application.Run();
         }
         catch (Exception ex)

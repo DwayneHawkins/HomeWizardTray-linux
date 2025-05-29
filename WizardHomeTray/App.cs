@@ -62,7 +62,6 @@ internal sealed class App
     {
         var activePower = await _homeWizardP1DataProvider.GetActivePower();
         var solarPower = await _smaSunnyBoyDataProvider.GetActivePower();
-        await _smaSunnyBoyDataProvider.Logout();
 
         var info = $"""
                     🌞 Solar yield: {solarPower} W
