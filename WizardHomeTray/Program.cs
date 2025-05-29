@@ -1,12 +1,12 @@
 using System;
-using Serilog;
-using Microsoft.Extensions.Hosting;
+using System.Net.Http;
+using HomeWizardTray.DataProviders.Daikin;
+using HomeWizardTray.DataProviders.HomeWizard;
+using HomeWizardTray.DataProviders.Sma;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Net.Http;
-using HomeWizardTray.DataProviders.Sma;
-using HomeWizardTray.DataProviders.HomeWizard;
-using HomeWizardTray.DataProviders.Daikin;
+using Microsoft.Extensions.Hosting;
+using Serilog;
 
 namespace HomeWizardTray;
 
@@ -25,7 +25,7 @@ internal static class Program
             Log.Information("Building app host and DI container.");
             var host = Host
                 .CreateDefaultBuilder()
-                .ConfigureServices((context, services) =>
+                .ConfigureServices((ctx, services) =>
                 {
                     services.AddSingleton<AppSettings>();
                     services.AddHttpClient<DaikinFtxm25DataProvider>();

@@ -1,9 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using HomeWizardTray.DataProviders.Daikin;
 using HomeWizardTray.DataProviders.HomeWizard;
 using HomeWizardTray.DataProviders.Sma;
-using HomeWizardTray.DataProviders.Daikin;
 using HomeWizardTray.Util;
 
 namespace HomeWizardTray;
