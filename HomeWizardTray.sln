@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WizardHomeTray", "WizardHomeTray\WizardHomeTray.csproj", "{737B1BB3-FD15-4AB2-9E9F-BF595697D2C4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HomeWizardTray", "HomeWizardTray\HomeWizardTray.csproj", "{737B1BB3-FD15-4AB2-9E9F-BF595697D2C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
