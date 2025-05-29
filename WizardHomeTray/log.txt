@@ -1,0 +1,9 @@
+2025-05-29 13:01:37.489 +02:00 [INF] Building app config.
+2025-05-29 13:01:37.510 +02:00 [INF] Building app host and DI container.
+2025-05-29 13:01:37.515 +02:00 [INF] App running in Production environment.
+2025-05-29 13:01:37.566 +02:00 [INF] Starting app.
+2025-05-29 13:03:31.955 +02:00 [INF] Building app config.
+2025-05-29 13:03:31.999 +02:00 [INF] Building app host and DI container.
+2025-05-29 13:03:32.011 +02:00 [INF] App running in Production environment.
+2025-05-29 13:03:32.099 +02:00 [INF] Starting app.
+2025-05-29 13:03:49.903 +02:00 [INF] Exiting app.
