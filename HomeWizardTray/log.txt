@@ -47,3 +47,7 @@ System.Net.Http.HttpRequestException: The SSL connection could not be establishe
 2025-05-30 12:06:15.836 +02:00 [INF] Starting app.
 2025-05-30 12:19:51.443 +02:00 [INF] Starting app.
 2025-05-30 12:21:48.577 +02:00 [INF] Starting app.
+2025-05-30 13:05:25.204 +02:00 [INF] Starting app.
+2025-05-30 13:06:11.231 +02:00 [INF] Starting app.
+2025-05-30 13:06:16.091 +02:00 [INF] Starting app.
+2025-05-30 13:06:46.244 +02:00 [INF] Exited app.

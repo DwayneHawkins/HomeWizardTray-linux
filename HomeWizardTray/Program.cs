@@ -1,9 +1,5 @@
 using System;
-using System.Net.Http;
-using HomeWizardTray.DataProviders;
-using HomeWizardTray.DataProviders.Daikin;
-using HomeWizardTray.DataProviders.HomeWizard;
-using HomeWizardTray.DataProviders.Sma;
+using HomeWizardTray.Util;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

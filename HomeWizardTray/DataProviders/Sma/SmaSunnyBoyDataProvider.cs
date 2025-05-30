@@ -79,9 +79,7 @@ internal sealed class SmaSunnyBoyDataProvider
     {
         if (_sid == null) return;
         ClearAndSetHeaders();
-        var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/dyn/logout.json?sid={_sid}", new { });
-        var responseContent = response.Content.ReadAsStringAsync().Result;
-        // TODO check and log if not succeeded
+        await _httpClient.PostAsJsonAsync($"{_baseUrl}/dyn/logout.json?sid={_sid}", new { });
         _sid = null;
     }
 
@@ -110,8 +108,8 @@ internal sealed class SmaSunnyBoyDataProvider
                 { "deviceSid443", _sid },
             };
 
-            static string escape(object obj) => Uri.EscapeDataString(JsonConvert.SerializeObject(obj));
-            var cookie = cookieValues.Aggregate("", (x, y) => x + $"{y.Key}={escape(y.Value)}; ");
+            static string Escape(object obj) => Uri.EscapeDataString(JsonConvert.SerializeObject(obj));
+            var cookie = cookieValues.Aggregate("", (x, y) => x + $"{y.Key}={Escape(y.Value)}; ");
 
             _httpClient.DefaultRequestHeaders.Add("Cookie", cookie);
         }

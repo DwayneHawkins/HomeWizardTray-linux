@@ -15,8 +15,6 @@ internal sealed class App
     private readonly HomeWizardP1DataProvider _homeWizardP1DataProvider;
     private readonly SmaSunnyBoyDataProvider _smaSunnyBoyDataProvider;
     private readonly DaikinFtxm25DataProvider _daikinFtxm25DataProvider;
-    private AyatanaAppIndicator _trayIcon;
-    private Gtk.Menu _menu;
 
     public App(
         HomeWizardP1DataProvider homeWizardP1DataProvider,
@@ -31,9 +29,9 @@ internal sealed class App
     public void Start()
     {
         Gtk.Application.Init();
-        _menu = BuildMenu();
+        var menu = BuildMenu();
         var iconPath = Path.GetDirectoryName(Environment.ProcessPath) + "/sun.png";
-        _trayIcon = new AyatanaAppIndicator(_menu.Handle, iconPath);
+        new AyatanaAppIndicator(menu.Handle, iconPath);
         Gtk.Application.Run();
     }
 

@@ -4,7 +4,7 @@ using HomeWizardTray.DataProviders.HomeWizard;
 using HomeWizardTray.DataProviders.Sma;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace HomeWizardTray.DataProviders;
+namespace HomeWizardTray.Util;
 
 internal static class ServiceCollectionExtensions
 {
