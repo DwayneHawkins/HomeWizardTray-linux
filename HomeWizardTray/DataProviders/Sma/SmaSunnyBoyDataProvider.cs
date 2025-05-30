@@ -23,6 +23,27 @@ internal sealed class SmaSunnyBoyDataProvider
         _appSettings = appSettings;
         _baseUrl = $"https://{_appSettings.SmaSunnyBoyIpAddress}";
     }
+    
+    public async Task<int> GetActivePower()
+    {
+        await Login();
+
+        ClearAndSetHeaders();
+
+        var postData = new Dictionary<string, object>
+        {
+            { "keys", new List<string> { "6100_40263F00" } },
+            { "destDev", new List<object>() }
+        };
+
+        var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/dyn/getValues.json?sid={_sid}", postData);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        await Logout();
+        
+        var watt = responseBody.Split(':').Last().Split('}').First();
+        return watt == "null" ? 0 : int.Parse(watt);
+    }
 
     private async Task Login()
     {
@@ -50,12 +71,10 @@ internal sealed class SmaSunnyBoyDataProvider
             throw new Exception($"Could not log in and retrieve sid from Sunny Boy. Response was: {responseContent}");
         }
     }
-
-    /// <summary>
-    /// Method to logout from Sunny Boy. This is not stricly needed, but consider:
-    /// - The amount of simultaneous active sid keys in SMA device is limited.
-    /// - The SMA device will invalidate sid keys after some time.
-    /// </summary>
+    
+    // Method to logout from Sunny Boy. This is not stricly needed, but consider:
+    // - The amount of simultaneous active sid keys in SMA device is limited.
+    // - The SMA device will invalidate sid keys after some time.
     private async Task Logout()
     {
         if (_sid == null) return;
@@ -64,27 +83,6 @@ internal sealed class SmaSunnyBoyDataProvider
         var responseContent = response.Content.ReadAsStringAsync().Result;
         // TODO check and log if not succeeded
         _sid = null;
-    }
-
-    public async Task<int> GetActivePower()
-    {
-        await Login();
-
-        ClearAndSetHeaders();
-
-        var postData = new Dictionary<string, object>
-        {
-            { "keys", new List<string> { "6100_40263F00" } },
-            { "destDev", new List<object>() }
-        };
-
-        var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/dyn/getValues.json?sid={_sid}", postData);
-        var responseBody = await response.Content.ReadAsStringAsync();
-
-        await Logout();
-        
-        var watt = responseBody.Split(':').Last().Split('}').First();
-        return watt == "null" ? 0 : int.Parse(watt);
     }
 
     private void ClearAndSetHeaders()

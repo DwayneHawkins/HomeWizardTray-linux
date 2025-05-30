@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using HomeWizardTray.DataProviders;
 using HomeWizardTray.DataProviders.Daikin;
 using HomeWizardTray.DataProviders.HomeWizard;
 using HomeWizardTray.DataProviders.Sma;
@@ -26,23 +27,18 @@ internal static class Program
                 .CreateDefaultBuilder()
                 .ConfigureServices((ctx, services) =>
                 {
-                    services.AddSingleton<App>();
                     services.AddSingleton<AppSettings>();
-                    services.AddHttpClient<DaikinFtxm25DataProvider>();
-                    services.AddHttpClient<HomeWizardP1DataProvider>();
-
-                    services
-                        .AddHttpClient<SmaSunnyBoyDataProvider>()
-                        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-                        {
-                            // Accept broken or lacking certificate from SMA Sunny Boy
-                            // TODO move and make it specific to the sunnyboy data provider class
-                            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                        });
+                    services.AddDataProviders();
+                    services.AddTransient<App>();
                 })
                 .Build();
 
-            AppDomain.CurrentDomain.ProcessExit += (_, _) => Log.Information("Exited app.");
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => 
+            {
+                host.Dispose();
+                Log.Information("Exited app.");
+            };
+            
             host.Services.GetRequiredService<App>().Start();
         }
         catch (Exception ex)

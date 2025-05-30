@@ -117,6 +117,6 @@ internal sealed class App
     private static void HandleError(Exception ex, string message)
     {
         Log.Error(ex, message);
-        ShowDialog("Error", message, Gtk.MessageType.Error);
+        ShowDialog("Error", message + " " + ex.Message, Gtk.MessageType.Error);
     }
 }
