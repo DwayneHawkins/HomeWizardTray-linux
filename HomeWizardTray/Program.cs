@@ -16,17 +16,17 @@ internal static class Program
     public static void Main()
     {
         Log.Logger = new LoggerConfiguration().WriteTo.File("log.txt").CreateLogger();
+        Log.Information("Starting app.");
 
         try
         {
-            Log.Information("Building app config.");
             var config = new ConfigurationBuilder().AddJsonFile("appsettings.json", false).Build();
-
-            Log.Information("Building app host and DI container.");
+            
             var host = Host
                 .CreateDefaultBuilder()
                 .ConfigureServices((ctx, services) =>
                 {
+                    services.AddSingleton<App>();
                     services.AddSingleton<AppSettings>();
                     services.AddHttpClient<DaikinFtxm25DataProvider>();
                     services.AddHttpClient<HomeWizardP1DataProvider>();
@@ -39,30 +39,16 @@ internal static class Program
                             // TODO move and make it specific to the sunnyboy data provider class
                             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
                         });
-
-                    services.AddTransient<App>();
-                })
-                .ConfigureAppConfiguration((ctx, builder) =>
-                {
-                    Log.Information("App running in {environment} environment.", ctx.HostingEnvironment.EnvironmentName);
-
-                    /*if (ctx.HostingEnvironment.IsDevelopment())
-                    {
-                        builder.AddUserSecrets<App>();
-                    }*/
                 })
                 .Build();
 
-            Log.Information("Starting app.");
-            Gtk.Application.Init();
-            var app = host.Services.GetRequiredService<App>();
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => { Log.Information("Exiting app."); };
-            Gtk.Application.Run();
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => Log.Information("Exited app.");
+            host.Services.GetRequiredService<App>().Start();
         }
         catch (Exception ex)
         {
             Log.Error(ex, "An error occured while starting the app.");
-            //MessageBox.Show("An error has occured. Please see log file.", "SunnyTray", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            throw;
         }
     }
 }

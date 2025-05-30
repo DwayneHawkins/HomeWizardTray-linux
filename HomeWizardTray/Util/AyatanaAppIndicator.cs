@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Runtime.InteropServices;
 
 namespace HomeWizardTray.Util;
@@ -8,10 +7,9 @@ internal sealed class AyatanaAppIndicator
 {
     private IntPtr _appIndicator;
     
-    public AyatanaAppIndicator(IntPtr menuHandle)
+    public AyatanaAppIndicator(IntPtr menuHandle, string iconPath)
     {
-        var iconFile = Path.GetDirectoryName(Environment.ProcessPath) + "/sun.png";
-        _appIndicator = app_indicator_new("HomeWizardTray", iconFile, Category.Services);
+        _appIndicator = app_indicator_new("HomeWizardTray", iconPath, Category.Services);
         app_indicator_set_status(_appIndicator, Status.Active);
         app_indicator_set_menu(_appIndicator, menuHandle);
     }

@@ -1,10 +1,12 @@
 using System;
+using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using HomeWizardTray.DataProviders.Daikin;
 using HomeWizardTray.DataProviders.HomeWizard;
 using HomeWizardTray.DataProviders.Sma;
 using HomeWizardTray.Util;
+using Serilog;
 
 namespace HomeWizardTray;
 
@@ -24,9 +26,15 @@ internal sealed class App
         _homeWizardP1DataProvider = homeWizardP1DataProvider;
         _smaSunnyBoyDataProvider = smaSunnyBoyDataProvider;
         _daikinFtxm25DataProvider = daikinFtxm25DataProvider;
+    }
 
+    public void Start()
+    {
+        Gtk.Application.Init();
         _menu = BuildMenu();
-        _trayIcon = new AyatanaAppIndicator(_menu.Handle);
+        var iconPath = Path.GetDirectoryName(Environment.ProcessPath) + "/sun.png";
+        _trayIcon = new AyatanaAppIndicator(_menu.Handle, iconPath);
+        Gtk.Application.Run();
     }
 
     private Gtk.Menu BuildMenu()
@@ -47,43 +55,68 @@ internal sealed class App
             ]),
             new("Show EV Info", (s, e) => ShowEvInfo()),
             new("-"),
-            new("Show logs", (s, e) => ShowLogs()),
+            new("Show Logs", (s, e) => ShowLogs()),
             new("Quit", (s, e) => Gtk.Application.Quit())
         ]);
     }
 
     private async Task ShowDaikinInfo()
     {
-        var info = await _daikinFtxm25DataProvider.GetStatus();
-        ShowDialog("Daikin Airco", info);
+        try
+        {
+            var info = await _daikinFtxm25DataProvider.GetStatus();
+            ShowDialog("Daikin Airco", info);
+        }
+        catch (Exception ex)
+        {
+            HandleError(ex, "Could not get Daikin status.");
+        }
     }
 
     private async Task ShowEvInfo()
     {
-        var activePower = await _homeWizardP1DataProvider.GetActivePower();
-        var solarPower = await _smaSunnyBoyDataProvider.GetActivePower();
+        try
+        {
+            var activePower = await _homeWizardP1DataProvider.GetActivePower();
+            var solarPower = await _smaSunnyBoyDataProvider.GetActivePower();
 
-        var info = $"""
-                    🌞 Solar yield: {solarPower} W
-                    ⚡ Power usage: {solarPower + activePower} W
-                    ⚡ Power draw: {(activePower < 0 ? 0 : activePower)} W
-                    ⚡ Power inject: {(activePower > 0 ? 0 : Math.Abs(activePower))} W
-                    """;
-
-        ShowDialog("EV Info", info);
+            ShowDialog("EV Info", $"""
+                                   🌞 Solar yield: {solarPower} W
+                                   ⚡ Power usage: {solarPower + activePower} W
+                                   ⚡ Power draw: {(activePower < 0 ? 0 : activePower)} W
+                                   ⚡ Power inject: {(activePower > 0 ? 0 : Math.Abs(activePower))} W
+                                   """);
+        }
+        catch (Exception ex)
+        {
+            HandleError(ex, "Could not get EV status.");
+        }
     }
 
     private static void ShowLogs()
     {
-        var info = new ProcessStartInfo("./log.txt") { Verb = "open", UseShellExecute = true };
-        Process.Start(info);
+        try
+        {
+            var psi = new ProcessStartInfo("./log.txt") { Verb = "open", UseShellExecute = true };
+            Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            HandleError(ex, "Could not open log file.");
+        }
     }
 
-    private static void ShowDialog(string title, string text)
+    private static void ShowDialog(string title, string text, Gtk.MessageType type = Gtk.MessageType.Info)
     {
-        var dialog = new Gtk.MessageDialog(null, Gtk.DialogFlags.Modal, Gtk.MessageType.Info, Gtk.ButtonsType.Ok, text);
+        var dialog = new Gtk.MessageDialog(null, Gtk.DialogFlags.Modal, type, Gtk.ButtonsType.Ok, text);
         dialog.Title = title;
         dialog.Run();
         dialog.Destroy();
+    }
+    
+    private static void HandleError(Exception ex, string message)
+    {
+        Log.Error(ex, message);
+        ShowDialog("Error", message, Gtk.MessageType.Error);
     }
 }

@@ -1,46 +1,14 @@
-2025-05-29 13:01:37.489 +02:00 [INF] Building app config.
-2025-05-29 13:01:37.510 +02:00 [INF] Building app host and DI container.
-2025-05-29 13:01:37.515 +02:00 [INF] App running in Production environment.
-2025-05-29 13:01:37.566 +02:00 [INF] Starting app.
-2025-05-29 13:03:31.955 +02:00 [INF] Building app config.
-2025-05-29 13:03:31.999 +02:00 [INF] Building app host and DI container.
-2025-05-29 13:03:32.011 +02:00 [INF] App running in Production environment.
-2025-05-29 13:03:32.099 +02:00 [INF] Starting app.
-2025-05-29 13:03:49.903 +02:00 [INF] Exiting app.
-2025-05-29 14:30:53.682 +02:00 [INF] Building app config.
-2025-05-29 14:30:53.703 +02:00 [INF] Building app host and DI container.
-2025-05-29 14:30:53.707 +02:00 [INF] App running in Production environment.
-2025-05-29 14:30:53.744 +02:00 [INF] Starting app.
-2025-05-29 14:31:51.009 +02:00 [INF] Building app config.
-2025-05-29 14:31:51.135 +02:00 [INF] Building app host and DI container.
-2025-05-29 14:31:51.140 +02:00 [INF] App running in Production environment.
-2025-05-29 14:31:51.185 +02:00 [INF] Starting app.
-2025-05-29 14:33:24.982 +02:00 [INF] Building app config.
-2025-05-29 14:33:25.033 +02:00 [INF] Building app host and DI container.
-2025-05-29 14:33:25.049 +02:00 [INF] App running in Production environment.
-2025-05-29 14:33:25.138 +02:00 [INF] Starting app.
-2025-05-29 14:37:15.621 +02:00 [INF] Building app config.
-2025-05-29 14:37:15.735 +02:00 [INF] Building app host and DI container.
-2025-05-29 14:37:15.740 +02:00 [INF] App running in Production environment.
-2025-05-29 14:37:15.787 +02:00 [INF] Starting app.
-2025-05-29 14:37:27.076 +02:00 [INF] Building app config.
-2025-05-29 14:37:27.117 +02:00 [INF] Building app host and DI container.
-2025-05-29 14:37:27.128 +02:00 [INF] App running in Production environment.
-2025-05-29 14:37:27.240 +02:00 [INF] Starting app.
-2025-05-29 14:39:05.108 +02:00 [INF] Building app config.
-2025-05-29 14:39:05.152 +02:00 [INF] Building app host and DI container.
-2025-05-29 14:39:05.165 +02:00 [INF] App running in Production environment.
-2025-05-29 14:39:05.254 +02:00 [INF] Starting app.
-2025-05-29 14:40:06.638 +02:00 [INF] Building app config.
-2025-05-29 14:40:06.659 +02:00 [INF] Building app host and DI container.
-2025-05-29 14:40:06.663 +02:00 [INF] App running in Production environment.
-2025-05-29 14:40:06.709 +02:00 [INF] Starting app.
-2025-05-29 14:54:28.412 +02:00 [INF] Building app config.
-2025-05-29 14:54:28.432 +02:00 [INF] Building app host and DI container.
-2025-05-29 14:54:28.436 +02:00 [INF] App running in Production environment.
-2025-05-29 14:54:28.483 +02:00 [INF] Starting app.
-2025-05-29 22:10:49.400 +02:00 [INF] Building app config.
-2025-05-29 22:10:49.425 +02:00 [INF] Building app host and DI container.
-2025-05-29 22:10:49.430 +02:00 [INF] App running in Production environment.
-2025-05-29 22:10:49.492 +02:00 [INF] Starting app.
-2025-05-29 22:11:06.964 +02:00 [INF] Exiting app.
+2025-05-29 23:07:01.849 +02:00 [INF] Starting app.
+2025-05-29 23:12:17.591 +02:00 [INF] Starting app.
+2025-05-29 23:12:23.360 +02:00 [ERR] Could not get EV status.
+GLib.GException: Failed to open file “dialog-warning”: No such file or directory
+   at Gtk.Window.SetIconFromFile(String filename)
+   at HomeWizardTray.App.ShowDialog(String title, String text, MessageType type) in /home/edwin/RiderProjects/HomeWizardTray/HomeWizardTray/App.cs:line 111
+   at HomeWizardTray.App.ShowEvInfo() in /home/edwin/RiderProjects/HomeWizardTray/HomeWizardTray/App.cs:line 81
+2025-05-29 23:13:40.763 +02:00 [INF] Starting app.
+2025-05-29 23:13:43.815 +02:00 [ERR] Could not get EV status.
+GLib.GException: Failed to open file “face-cool”: No such file or directory
+   at Gtk.Window.SetIconFromFile(String filename)
+   at HomeWizardTray.App.ShowDialog(String title, String text, MessageType type) in /home/edwin/RiderProjects/HomeWizardTray/HomeWizardTray/App.cs:line 111
+   at HomeWizardTray.App.ShowEvInfo() in /home/edwin/RiderProjects/HomeWizardTray/HomeWizardTray/App.cs:line 81
+2025-05-29 23:17:32.617 +02:00 [INF] Starting app.
