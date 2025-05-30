@@ -2,15 +2,15 @@
 
 internal static class Power
 {
-    public static string Off = "0";
-    public static string On = "1";
+    public const string Off = "0";
+    public const string On = "1";
 
     public static string GetName(string value)
     {
         return value switch
         {
-            "1" => nameof(On),
-            _ => nameof(Off)
+            "1" => "On",
+            _ => "Off"
         };
     }
 }

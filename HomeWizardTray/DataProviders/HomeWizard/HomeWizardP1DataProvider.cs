@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using HomeWizardTray.DataProviders.HomeWizard.Dto;
 using Newtonsoft.Json;
@@ -18,10 +19,22 @@ internal sealed class HomeWizardP1DataProvider
         _baseUrl = $"http://{_appSettings.P1MeterIpAddress}";
     }
 
-    public async Task<int> GetActivePower()
+    public async Task<PowerInfo> GetPower()
     {
         var dataResponseJson = await _httpClient.GetStringAsync($"{_baseUrl}/api/v1/data");
         var dataResponse = JsonConvert.DeserializeObject<DataResponse>(dataResponseJson);
-        return (int)dataResponse.ActivePower;
+        return new PowerInfo(dataResponse.ActivePower);
+    }
+
+    public class PowerInfo
+    {
+        public int Export { get; private set; }
+        public int Import { get; private set; }
+        
+        public PowerInfo(decimal activePower)
+        {
+            Import = activePower < 0 ? 0 : (int)activePower;
+            Export = activePower > 0 ? 0 : Math.Abs((int)activePower);
+        }
     }
 }

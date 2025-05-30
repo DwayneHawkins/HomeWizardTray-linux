@@ -23,27 +23,33 @@ internal sealed class DaikinFtxm25DataProvider
 
     public async Task<string> GetStatus()
     {
-        var dic = await GetDic();
-
-        return JsonConvert.SerializeObject(new Dic
-            {
-                [nameof(Keys.Power)] = Power.GetName(dic[Keys.Power]),
-                [nameof(Keys.Mode)] = Mode.GetName(dic[Keys.Mode]),
-                [nameof(Keys.Temperature)] = dic[Keys.Temperature],
-                [nameof(Keys.Humidity)] = dic[Keys.Humidity],
-                [nameof(Keys.FanSpeed)] = FanSpeed.GetName(dic[Keys.FanSpeed]),
-                [nameof(Keys.FanMotion)] = FanMotion.GetName(dic[Keys.FanMotion]),
-            })
-            .Replace("{", "")
-            .Replace("}", "")
-            .Replace(":\"", " = ")
-            .Replace("\"", "")
-            .Replace(",", "\r\n");
+        var info = await GetControlInfo();
+        var temp = await GetSensorInfo();
+        
+        return $"""
+                ⚡ Power: {Power.GetName(info[Keys.Power])}
+                ⚙️ Mode: {Mode.GetName(info[Keys.Mode])}
+                
+                🌡️ Thermostat: {info[Keys.Thermostat]}°C
+                🏠 Inside: {temp[Keys.InsideTemp]}°C
+                🌳 Outside: {temp[Keys.OutsideTemp]}°C
+                
+                🌬️ Fan Speed: {FanSpeed.GetName(info[Keys.FanSpeed])}
+                ↔️ Fan Motion: {FanMotion.GetName(info[Keys.FanMotion])}
+                """;
     }
 
-    private async Task<Dic> GetDic()
+    private async Task<Dic> GetControlInfo()
     {
         var dataResponse = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
+        var toQueryString = dataResponse.Replace(",", "&");
+        var kvs = HttpUtility.ParseQueryString(toQueryString);
+        return kvs.Cast<string>().ToDictionary(k => k, v => kvs[v]);
+    }
+    
+    private async Task<Dic> GetSensorInfo()
+    {
+        var dataResponse = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_sensor_info");
         var toQueryString = dataResponse.Replace(",", "&");
         var kvs = HttpUtility.ParseQueryString(toQueryString);
         return kvs.Cast<string>().ToDictionary(k => k, v => kvs[v]);
@@ -58,7 +64,7 @@ internal sealed class DaikinFtxm25DataProvider
         {
             [Keys.Power] = Power.On,
             [Keys.Mode] = Mode.Cooling,
-            [Keys.Temperature] = "18.0",
+            [Keys.Thermostat] = "18.0",
             [Keys.Humidity] = "0",
             [Keys.FanSpeed] = FanSpeed.Level5,
             [Keys.FanMotion] = FanMotion.None
@@ -74,7 +80,7 @@ internal sealed class DaikinFtxm25DataProvider
         {
             [Keys.Power] = Power.On,
             [Keys.Mode] = Mode.Cooling,
-            [Keys.Temperature] = "18.0",
+            [Keys.Thermostat] = "18.0",
             [Keys.Humidity] = "0",
             [Keys.FanSpeed] = FanSpeed.Level2,
             [Keys.FanMotion] = FanMotion.None
@@ -90,7 +96,7 @@ internal sealed class DaikinFtxm25DataProvider
         {
             [Keys.Power] = Power.On,
             [Keys.Mode] = Mode.Cooling,
-            [Keys.Temperature] = "18.0",
+            [Keys.Thermostat] = "18.0",
             [Keys.Humidity] = "0",
             [Keys.FanSpeed] = FanSpeed.Silent,
             [Keys.FanMotion] = FanMotion.None,
@@ -106,7 +112,7 @@ internal sealed class DaikinFtxm25DataProvider
         {
             [Keys.Power] = Power.On,
             [Keys.Mode] = Mode.Dehumidify,
-            [Keys.Temperature] = "18.0",
+            [Keys.Thermostat] = "18.0",
             [Keys.Humidity] = "0",
             [Keys.FanSpeed] = FanSpeed.Auto,
             [Keys.FanMotion] = FanMotion.None,
@@ -115,9 +121,9 @@ internal sealed class DaikinFtxm25DataProvider
 
     public async Task SetOff()
     {
-        var dic = await GetDic();
-        dic[Keys.Power] = Power.Off;
-        await SetControlInfo(dic);
+        var info = await GetControlInfo();
+        info[Keys.Power] = Power.Off;
+        await SetControlInfo(info);
     }
 
     private async Task SetControlInfo(Dic dic)

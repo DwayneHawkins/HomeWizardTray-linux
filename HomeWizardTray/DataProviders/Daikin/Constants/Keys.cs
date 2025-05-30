@@ -2,13 +2,14 @@
 
 internal static class Keys
 {
-    public static string Power = "pow";
-    public static string Mode = "mode";
-    public static string Temperature = "stemp";
-    public static string Humidity = "shum";
-    public static string FanSpeed = "f_rate";
-    public static string FanMotion = "f_dir";
-
-    public static string SpecialMode = "spmode_kind";
-    public static string SpecialModeState = "set_spmode";
+    public const string Power = "pow";
+    public const string Mode = "mode";
+    public const string Thermostat = "stemp";
+    public const string InsideTemp = "htemp";
+    public const string OutsideTemp = "otemp";
+    public const string Humidity = "shum";
+    public const string FanSpeed = "f_rate";
+    public const string FanMotion = "f_dir";
+    public const string SpecialMode = "spmode_kind";
+    public const string SpecialModeState = "set_spmode";
 }

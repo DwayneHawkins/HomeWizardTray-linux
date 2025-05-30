@@ -2,19 +2,19 @@
 
 internal static class FanMotion
 {
-    public static string None = "0";
-    public static string Vertical = "1";
-    public static string Horizontal = "2";
-    public static string Full = "3";
+    public const string None = "0";
+    public const string Vertical = "1";
+    public const string Horizontal = "2";
+    public const string Full = "3";
 
     public static string GetName(string value)
     {
         return value switch
         {
-            "1" => nameof(Vertical),
-            "2" => nameof(Horizontal),
-            "3" => nameof(Full),
-            _ => nameof(None)
+            "1" => "Vertical",
+            "2" => "Horizontal",
+            "3" => "Full",
+            _ => "None"
         };
     }
 }

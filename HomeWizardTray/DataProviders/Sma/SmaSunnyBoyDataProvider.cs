@@ -24,7 +24,7 @@ internal sealed class SmaSunnyBoyDataProvider
         _baseUrl = $"https://{_appSettings.SmaSunnyBoyIpAddress}";
     }
     
-    public async Task<int> GetActivePower()
+    public async Task<int> GetYield()
     {
         await Login();
 

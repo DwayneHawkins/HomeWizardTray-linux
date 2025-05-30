@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Gdk;
 using HomeWizardTray.DataProviders.Daikin;
 using HomeWizardTray.DataProviders.HomeWizard;
 using HomeWizardTray.DataProviders.Sma;
@@ -31,7 +32,7 @@ internal sealed class App
         Gtk.Application.Init();
         var menu = BuildMenu();
         var iconPath = Path.GetDirectoryName(Environment.ProcessPath) + "/sun.png";
-        new AyatanaAppIndicator(menu.Handle, iconPath);
+        var trayIcon = new AyatanaAppIndicator(menu.Handle, iconPath);
         Gtk.Application.Run();
     }
 
@@ -39,7 +40,7 @@ internal sealed class App
     {
         return GtkMenuBuilder.Build(
         [
-            new("Daikin Airco",
+            new("Daikin",
             [
                 new("Power On", (s, e) => _daikinFtxm25DataProvider.SetLevel2()),
                 new("Power Off", (s, e) => _daikinFtxm25DataProvider.SetOff()),
@@ -51,7 +52,10 @@ internal sealed class App
                 new("-"),
                 new("Show Status", (s, e) => ShowDaikinInfo())
             ]),
-            new("Show EV Info", (s, e) => ShowEvInfo()),
+            new("Solar", 
+            [
+                new("Show Status", (s, e) => ShowSolarInfo()),
+            ]),
             new("-"),
             new("Show Logs", (s, e) => ShowLogs()),
             new("Quit", (s, e) => Gtk.Application.Quit())
@@ -63,7 +67,7 @@ internal sealed class App
         try
         {
             var info = await _daikinFtxm25DataProvider.GetStatus();
-            ShowDialog("Daikin Airco", info);
+            ShowDialog("Daikin", info);
         }
         catch (Exception ex)
         {
@@ -71,19 +75,24 @@ internal sealed class App
         }
     }
 
-    private async Task ShowEvInfo()
+    private async Task ShowSolarInfo()
     {
         try
         {
-            var activePower = await _homeWizardP1DataProvider.GetActivePower();
-            var solarPower = await _smaSunnyBoyDataProvider.GetActivePower();
+            var yieldTask = _smaSunnyBoyDataProvider.GetYield();
+            var powerTask = _homeWizardP1DataProvider.GetPower();
+            await Task.WhenAll(yieldTask, powerTask);
+            var yield = yieldTask.Result;
+            var power = powerTask.Result;
 
-            ShowDialog("EV Info", $"""
-                                   🌞 Solar yield: {solarPower} W
-                                   ⚡ Power usage: {solarPower + activePower} W
-                                   ⚡ Power draw: {(activePower < 0 ? 0 : activePower)} W
-                                   ⚡ Power inject: {(activePower > 0 ? 0 : Math.Abs(activePower))} W
-                                   """);
+            ShowDialog("Solar Status", $"""
+                                        🌞 Solar yield: {yield} W
+
+                                        ⚡ Power draw: {power.Import} W
+                                        ⚡ Power injection: {power.Export} W
+
+                                        🏠 Currrently using {yield + power.Import - power.Export} W
+                                        """);
         }
         catch (Exception ex)
         {
@@ -108,6 +117,9 @@ internal sealed class App
     {
         var dialog = new Gtk.MessageDialog(null, Gtk.DialogFlags.Modal, type, Gtk.ButtonsType.Ok, text);
         dialog.Title = title;
+        var iconBytes = File.ReadAllBytes(Path.GetDirectoryName(Environment.ProcessPath) + "/sun.png");
+        using var ms = new MemoryStream(iconBytes);
+        dialog.Icon = new Pixbuf(ms);
         dialog.Run();
         dialog.Destroy();
     }
