@@ -18,7 +18,7 @@ internal static class Program
         try
         {
             var config = new ConfigurationBuilder().AddJsonFile("appsettings.json", false).Build();
-            
+
             var host = Host
                 .CreateDefaultBuilder()
                 .ConfigureServices((ctx, services) =>
@@ -27,14 +27,18 @@ internal static class Program
                     services.AddDataProviders();
                     services.AddTransient<App>();
                 })
+                .ConfigureAppConfiguration((ctx, builder) =>
+                {
+                    builder.AddUserSecrets<App>();
+                })
                 .Build();
 
-            AppDomain.CurrentDomain.ProcessExit += (_, _) => 
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
                 host.Dispose();
                 Log.Information("Exited app.");
             };
-            
+
             host.Services.GetRequiredService<App>().Start();
         }
         catch (Exception ex)
