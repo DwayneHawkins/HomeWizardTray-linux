@@ -28,13 +28,13 @@ internal sealed class HomeWizardP1DataProvider
 
     public class PowerInfo
     {
-        public int Export { get; private set; }
-        public int Import { get; private set; }
+        public uint Export { get; private set; }
+        public uint Import { get; private set; }
         
         public PowerInfo(decimal activePower)
         {
-            Import = activePower < 0 ? 0 : (int)activePower;
-            Export = activePower > 0 ? 0 : Math.Abs((int)activePower);
+            Import = activePower < 0 ? 0 : (uint)activePower;
+            Export = activePower > 0 ? 0 : (uint)Math.Abs((int)activePower);
         }
     }
 }

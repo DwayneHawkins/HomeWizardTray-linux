@@ -77,7 +77,7 @@ internal sealed class App
             case nameof(ShowLogs): ShowLogs(); break;
         }
     }
-    
+
     private async Task DaikinSetNormal()
     {
         try
@@ -86,10 +86,10 @@ internal sealed class App
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not set Daikin to normal mode.");
+            HandleException(ex, "Could not set Daikin to normal mode.");
         }
     }
-    
+
     private async Task DaikinSetMax()
     {
         try
@@ -98,10 +98,10 @@ internal sealed class App
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not set Daikin to max mode.");
+            HandleException(ex, "Could not set Daikin to max mode.");
         }
     }
-    
+
     private async Task DaikinSetDehumidify()
     {
         try
@@ -110,10 +110,10 @@ internal sealed class App
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not set Daikin to dehumidify mode.");
+            HandleException(ex, "Could not set Daikin to dehumidify mode.");
         }
     }
-    
+
     private async Task DaikinSetOff()
     {
         try
@@ -122,10 +122,10 @@ internal sealed class App
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not set Daikin to off.");
+            HandleException(ex, "Could not set Daikin to off.");
         }
     }
-    
+
     private async Task DaikinSetEco()
     {
         try
@@ -134,7 +134,7 @@ internal sealed class App
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not set Daikin to eco mode.");
+            HandleException(ex, "Could not set Daikin to eco mode.");
         }
     }
 
@@ -152,12 +152,12 @@ internal sealed class App
                 : "⚡ Power off";
 
             var temps = $"🌡️️ Room is {temp[Keys.InsideTemp]} °C\n🌳 Outside is {temp[Keys.OutsideTemp]} °C";
-            
+
             ShowNotification("Daikin FTXM25", $"{mode}\n{temps}");
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not get Daikin status.");
+            HandleException(ex, "Could not get Daikin status.");
         }
     }
 
@@ -168,18 +168,16 @@ internal sealed class App
             var yield = await _smaSunnyBoyDataProvider.GetYield();
             var power = await _homeWizardP1DataProvider.GetPower();
 
-            ShowNotification("SMA Sunny Boy", $"""
-                                               🌞 Solar yield: {yield} W
+            var info = $"🌞 Yielding {yield} W";
+            if (power.Import > 0) info += $"\n🔻 Drawing {power.Import} W";
+            info += $"\n🏠 Consuming {yield + power.Import - power.Export} W";
+            if (power.Export > 0) info += $"\n👍🏻 Injecting {power.Export} W"; 
 
-                                               ⚡ Power draw: {power.Import} W
-                                               ⚡ Power injection: {power.Export} W
-
-                                               🏠 Currrently using {yield + power.Import - power.Export} W
-                                               """);
+            ShowNotification("SMA Sunny Boy", info);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not get Sunny Boy status.");
+            HandleException(ex, "Could not get Sunny Boy status.");
         }
     }
 
@@ -193,20 +191,22 @@ internal sealed class App
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not open log file.");
+            HandleException(ex, "Could not open log file.");
         }
     }
 
-    private static void ShowNotification(string title, string text)
+    private static void ShowNotification(string title, string message, bool isError = false)
     {
         try
         {
             var iconPath = Path.Combine(AppContext.BaseDirectory, "sun.png");
+            
             var psi = new ProcessStartInfo
             {
-                FileName = "notify-send",
-                Arguments = $"-a HomeWizardTray -i {iconPath} -t 0 -u normal \"{title}\" \"{text}\"",
-                UseShellExecute = false
+                FileName = "notify-send", UseShellExecute = false,
+                Arguments = isError
+                    ? $"-a HomeWizardTray -u critical \"{title}\" \"{message}\""
+                    : $"-a HomeWizardTray -i {iconPath} -t 10000 \"{title}\" \"{message}\""
             };
 
             Process.Start(psi);
@@ -215,5 +215,11 @@ internal sealed class App
         {
             Log.Error(ex, "Could not invoke notify-send.");
         }
+    }
+
+    private static void HandleException(Exception ex, string message)
+    {
+        Log.Error(ex, message);
+        ShowNotification("Error", message, isError: true);
     }
 }

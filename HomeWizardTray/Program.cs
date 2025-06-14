@@ -26,8 +26,6 @@ internal static class Program
             var config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json", false, false)
                 .Build();
-            
-            Log.Information(JsonConvert.SerializeObject(config));
 
             var host = Host
                 .CreateDefaultBuilder()
