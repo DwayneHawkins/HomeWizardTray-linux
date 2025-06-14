@@ -25,9 +25,17 @@ internal static class GtkMenuBuilder
                 var gtkMenuItem = new GtkMenuItem(menuEntry.Caption);
                 menu.Append(gtkMenuItem);
 
-                if (menuEntry.OnClick is not null)
+                if (menuEntry.OnClick is null)
+                {
+                    if (menuEntry.Children == null || menuEntry.Children.Length == 0)
+                    {
+                        gtkMenuItem.Sensitive = false;
+                    }
+                }
+                else
                 {
                     gtkMenuItem.Activated += menuEntry.OnClick;
+                    gtkMenuItem.StyleContext.AddClass("header");
                 }
 
                 if (menuEntry.Children?.Length > 0)

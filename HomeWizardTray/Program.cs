@@ -1,9 +1,14 @@
 using System;
+using System.IO;
+using System.Threading;
+using GLib;
 using HomeWizardTray.Util;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using Serilog;
+using Log = Serilog.Log;
 
 namespace HomeWizardTray;
 
@@ -12,12 +17,17 @@ internal static class Program
     [STAThread]
     public static void Main()
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.File("log.txt").CreateLogger();
+        var logPath = Path.Combine(AppContext.BaseDirectory, "log.txt");
+        Log.Logger = new LoggerConfiguration().WriteTo.File(logPath).CreateLogger();
         Log.Information("Starting app.");
 
         try
         {
-            var config = new ConfigurationBuilder().AddJsonFile("appsettings.json", false).Build();
+            var config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", false, false)
+                .Build();
+            
+            Log.Information(JsonConvert.SerializeObject(config));
 
             var host = Host
                 .CreateDefaultBuilder()
@@ -25,7 +35,7 @@ internal static class Program
                 {
                     services.AddSingleton<AppSettings>();
                     services.AddDataProviders();
-                    services.AddTransient<App>();
+                    services.AddSingleton<App>();
                 })
                 .ConfigureAppConfiguration((ctx, builder) =>
                 {

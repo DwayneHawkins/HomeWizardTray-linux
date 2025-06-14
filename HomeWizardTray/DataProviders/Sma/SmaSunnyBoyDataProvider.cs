@@ -23,7 +23,7 @@ internal sealed class SmaSunnyBoyDataProvider
         _appSettings = appSettings;
         _baseUrl = $"https://{_appSettings.SmaSunnyBoyIpAddress}";
     }
-    
+
     public async Task<int> GetYield()
     {
         await Login();
@@ -40,7 +40,7 @@ internal sealed class SmaSunnyBoyDataProvider
         var responseBody = await response.Content.ReadAsStringAsync();
 
         await Logout();
-        
+
         var watt = responseBody.Split(':').Last().Split('}').First();
         return watt == "null" ? 0 : int.Parse(watt);
     }
@@ -48,7 +48,7 @@ internal sealed class SmaSunnyBoyDataProvider
     private async Task Login()
     {
         if (_sid != null) return;
-        
+
         var postData = new Dictionary<string, string>
         {
             { "right", _appSettings.SmaSunnyBoyUser.ToString() },
@@ -60,18 +60,17 @@ internal sealed class SmaSunnyBoyDataProvider
         var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/dyn/login.json", postData);
         _httpClient.DefaultRequestHeaders.Clear();
         response.EnsureSuccessStatusCode();
-
-        var responseContent = response.Content.ReadAsStringAsync().Result;
+        var responseContent = await response.Content.ReadAsStringAsync();
 
         var loginResponse = JsonConvert.DeserializeObject<LoginResponse>(responseContent);
         _sid = loginResponse?.Result?.Sid;
 
         if (_sid == null)
         {
-            throw new Exception($"Could not log in and retrieve sid from Sunny Boy. Response was: {responseContent}");
+            throw new Exception("Could not log in and retrieve sid from Sunny Boy.");
         }
     }
-    
+
     // Method to logout from Sunny Boy. This is not stricly needed, but consider:
     // - The amount of simultaneous active sid keys in SMA device is limited.
     // - The SMA device will invalidate sid keys after some time.

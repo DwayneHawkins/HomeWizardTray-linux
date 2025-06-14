@@ -2,8 +2,8 @@ using System;
 using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Gdk;
 using HomeWizardTray.DataProviders.Daikin;
+using HomeWizardTray.DataProviders.Daikin.Constants;
 using HomeWizardTray.DataProviders.HomeWizard;
 using HomeWizardTray.DataProviders.Sma;
 using HomeWizardTray.Util;
@@ -16,6 +16,7 @@ internal sealed class App
     private readonly HomeWizardP1DataProvider _homeWizardP1DataProvider;
     private readonly SmaSunnyBoyDataProvider _smaSunnyBoyDataProvider;
     private readonly DaikinFtxm25DataProvider _daikinFtxm25DataProvider;
+    private readonly CommandQueue _commandQueue;
 
     public App(
         HomeWizardP1DataProvider homeWizardP1DataProvider,
@@ -25,13 +26,16 @@ internal sealed class App
         _homeWizardP1DataProvider = homeWizardP1DataProvider;
         _smaSunnyBoyDataProvider = smaSunnyBoyDataProvider;
         _daikinFtxm25DataProvider = daikinFtxm25DataProvider;
+
+        _commandQueue = new CommandQueue();
+        _commandQueue.OnCommand += OnCommand;
     }
 
     public void Start()
     {
         Gtk.Application.Init();
         var menu = BuildMenu();
-        var iconPath = Path.GetDirectoryName(Environment.ProcessPath) + "/sun.png";
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "sun.png");
         var trayIcon = new AyatanaAppIndicator(menu.Handle, iconPath);
         Gtk.Application.Run();
     }
@@ -40,63 +44,142 @@ internal sealed class App
     {
         return GtkMenuBuilder.Build(
         [
-            new("Daikin",
+            new("DAIKIN"),
+            new("Mode",
             [
-                new("Power On", (s, e) => _daikinFtxm25DataProvider.SetLevel2()),
-                new("Power Off", (s, e) => _daikinFtxm25DataProvider.SetOff()),
-                new("-"),
-                new("Set Max", (s, e) => _daikinFtxm25DataProvider.SetMax()),
-                new("Set Normal", (s, e) => _daikinFtxm25DataProvider.SetLevel2()),
-                new("Set Eco", (s, e) => _daikinFtxm25DataProvider.SetEco()),
-                new("Set Dehumidify", (s, e) => _daikinFtxm25DataProvider.SetDehumidify()),
-                new("-"),
-                new("Show Status", (s, e) => ShowDaikinInfo())
+                new("Normal", (_, _) => _commandQueue.Add(nameof(DaikinSetNormal))),
+                new("Max", (_, _) => _commandQueue.Add(nameof(DaikinSetMax))),
+                new("Eco", (_, _) => _commandQueue.Add(nameof(DaikinSetEco))),
+                new("Dehumidify", (_, _) => _commandQueue.Add(nameof(DaikinSetDehumidify))),
+                new("Off", (_, _) => _commandQueue.Add(nameof(DaikinSetOff)))
             ]),
-            new("Solar", 
-            [
-                new("Show Status", (s, e) => ShowSolarInfo()),
-            ]),
+            new("Status", (_, _) => _commandQueue.Add(nameof(DaikinShowStatus))),
             new("-"),
-            new("Show Logs", (s, e) => ShowLogs()),
-            new("Quit", (s, e) => Gtk.Application.Quit())
+            new("SUNNY BOY"),
+            new("Status", (_, _) => _commandQueue.Add(nameof(SmaShowStatus))),
+            new("-"),
+            new("Logs", (_, _) => _commandQueue.Add(nameof(ShowLogs))),
+            new("Quit", (_, _) => Gtk.Application.Quit())
         ]);
     }
 
-    private async Task ShowDaikinInfo()
+    private async void OnCommand(object sender, CommandQueueEventArgs evt)
+    {
+        switch (evt.Command)
+        {
+            case nameof(DaikinSetNormal): await DaikinSetNormal(); break;
+            case nameof(DaikinSetMax): await DaikinSetMax(); break;
+            case nameof(DaikinSetEco): await DaikinSetEco(); break;
+            case nameof(DaikinSetDehumidify): await DaikinSetDehumidify(); break;
+            case nameof(DaikinSetOff): await DaikinSetOff(); break;
+            case nameof(DaikinShowStatus): await DaikinShowStatus(); break;
+            case nameof(SmaShowStatus): await SmaShowStatus(); break;
+            case nameof(ShowLogs): ShowLogs(); break;
+        }
+    }
+    
+    private async Task DaikinSetNormal()
     {
         try
         {
-            var info = await _daikinFtxm25DataProvider.GetStatus();
-            ShowDialog("Daikin", info);
+            await _daikinFtxm25DataProvider.SetNormal();
         }
         catch (Exception ex)
         {
-            HandleError(ex, "Could not get Daikin status.");
+            Log.Error(ex, "Could not set Daikin to normal mode.");
+        }
+    }
+    
+    private async Task DaikinSetMax()
+    {
+        try
+        {
+            await _daikinFtxm25DataProvider.SetMax();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not set Daikin to max mode.");
+        }
+    }
+    
+    private async Task DaikinSetDehumidify()
+    {
+        try
+        {
+            await _daikinFtxm25DataProvider.SetDehumidify();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not set Daikin to dehumidify mode.");
+        }
+    }
+    
+    private async Task DaikinSetOff()
+    {
+        try
+        {
+            await _daikinFtxm25DataProvider.SetOff();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not set Daikin to off.");
+        }
+    }
+    
+    private async Task DaikinSetEco()
+    {
+        try
+        {
+            await _daikinFtxm25DataProvider.SetEco();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not set Daikin to eco mode.");
         }
     }
 
-    private async Task ShowSolarInfo()
+    private async Task DaikinShowStatus()
     {
         try
         {
-            var yieldTask = _smaSunnyBoyDataProvider.GetYield();
-            var powerTask = _homeWizardP1DataProvider.GetPower();
-            await Task.WhenAll(yieldTask, powerTask);
-            var yield = yieldTask.Result;
-            var power = powerTask.Result;
+            var info = await _daikinFtxm25DataProvider.GetControlInfo();
+            var temp = await _daikinFtxm25DataProvider.GetSensorInfo();
 
-            ShowDialog("Solar Status", $"""
-                                        🌞 Solar yield: {yield} W
+            var isOn = info[Keys.Power] == Power.On;
 
-                                        ⚡ Power draw: {power.Import} W
-                                        ⚡ Power injection: {power.Export} W
+            var mode = isOn
+                ? $"⚡ {Mode.GetName(info[Keys.Mode])} to {info[Keys.Thermostat]} °C\n🌬️ Fans at {FanSpeed.GetName(info[Keys.FanSpeed])}"
+                : "⚡ Power off";
 
-                                        🏠 Currrently using {yield + power.Import - power.Export} W
-                                        """);
+            var temps = $"🌡️️ Room is {temp[Keys.InsideTemp]} °C\n🌳 Outside is {temp[Keys.OutsideTemp]} °C";
+            
+            ShowNotification("Daikin FTXM25", $"{mode}\n{temps}");
         }
         catch (Exception ex)
         {
-            HandleError(ex, "Could not get EV status.");
+            Log.Error(ex, "Could not get Daikin status.");
+        }
+    }
+
+    private async Task SmaShowStatus()
+    {
+        try
+        {
+            var yield = await _smaSunnyBoyDataProvider.GetYield();
+            var power = await _homeWizardP1DataProvider.GetPower();
+
+            ShowNotification("SMA Sunny Boy", $"""
+                                               🌞 Solar yield: {yield} W
+
+                                               ⚡ Power draw: {power.Import} W
+                                               ⚡ Power injection: {power.Export} W
+
+                                               🏠 Currrently using {yield + power.Import - power.Export} W
+                                               """);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not get Sunny Boy status.");
         }
     }
 
@@ -104,29 +187,33 @@ internal sealed class App
     {
         try
         {
-            var psi = new ProcessStartInfo("./log.txt") { Verb = "open", UseShellExecute = true };
+            var logPath = Path.Combine(AppContext.BaseDirectory, "log.txt");
+            var psi = new ProcessStartInfo(logPath) { Verb = "open", UseShellExecute = true };
             Process.Start(psi);
         }
         catch (Exception ex)
         {
-            HandleError(ex, "Could not open log file.");
+            Log.Error(ex, "Could not open log file.");
         }
     }
 
-    private static void ShowDialog(string title, string text, Gtk.MessageType type = Gtk.MessageType.Info)
+    private static void ShowNotification(string title, string text)
     {
-        var dialog = new Gtk.MessageDialog(null, Gtk.DialogFlags.Modal, type, Gtk.ButtonsType.Ok, text);
-        dialog.Title = title;
-        var iconBytes = File.ReadAllBytes(Path.GetDirectoryName(Environment.ProcessPath) + "/sun.png");
-        using var ms = new MemoryStream(iconBytes);
-        dialog.Icon = new Pixbuf(ms);
-        dialog.Run();
-        dialog.Destroy();
-    }
-    
-    private static void HandleError(Exception ex, string message)
-    {
-        Log.Error(ex, message);
-        ShowDialog("Error", message + " " + ex.Message, Gtk.MessageType.Error);
+        try
+        {
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "sun.png");
+            var psi = new ProcessStartInfo
+            {
+                FileName = "notify-send",
+                Arguments = $"-a HomeWizardTray -i {iconPath} -t 0 -u normal \"{title}\" \"{text}\"",
+                UseShellExecute = false
+            };
+
+            Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not invoke notify-send.");
+        }
     }
 }

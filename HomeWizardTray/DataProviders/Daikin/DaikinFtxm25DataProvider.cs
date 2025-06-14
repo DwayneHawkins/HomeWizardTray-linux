@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using HomeWizardTray.DataProviders.Daikin.Constants;
-using Newtonsoft.Json;
 using Dic = System.Collections.Generic.Dictionary<string, string>;
 
 namespace HomeWizardTray.DataProviders.Daikin;
@@ -21,33 +20,15 @@ internal sealed class DaikinFtxm25DataProvider
         _baseUrl = $"http://{_appSettings.DaikinFtxm25IpAddress}";
     }
 
-    public async Task<string> GetStatus()
+    public async Task<Dic> GetControlInfo()
     {
-        var info = await GetControlInfo();
-        var temp = await GetSensorInfo();
-        
-        return $"""
-                ⚡ Power: {Power.GetName(info[Keys.Power])}
-                ⚙️ Mode: {Mode.GetName(info[Keys.Mode])}
-                
-                🌡️ Thermostat: {info[Keys.Thermostat]}°C
-                🏠 Inside: {temp[Keys.InsideTemp]}°C
-                🌳 Outside: {temp[Keys.OutsideTemp]}°C
-                
-                🌬️ Fan Speed: {FanSpeed.GetName(info[Keys.FanSpeed])}
-                ↔️ Fan Motion: {FanMotion.GetName(info[Keys.FanMotion])}
-                """;
-    }
-
-    private async Task<Dic> GetControlInfo()
-    {
-        var dataResponse = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
-        var toQueryString = dataResponse.Replace(",", "&");
+        var response = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
+        var toQueryString = response.Replace(",", "&");
         var kvs = HttpUtility.ParseQueryString(toQueryString);
         return kvs.Cast<string>().ToDictionary(k => k, v => kvs[v]);
     }
-    
-    private async Task<Dic> GetSensorInfo()
+
+    public async Task<Dic> GetSensorInfo()
     {
         var dataResponse = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_sensor_info");
         var toQueryString = dataResponse.Replace(",", "&");
@@ -71,7 +52,7 @@ internal sealed class DaikinFtxm25DataProvider
         });
     }
 
-    public async Task SetLevel2()
+    public async Task SetNormal()
     {
         await SetSpecialMode(new Dic { [Keys.SpecialMode] = SpecialMode.Econo, [Keys.SpecialModeState] = SpecialModeState.Off });
         await SetSpecialMode(new Dic { [Keys.SpecialMode] = SpecialMode.Powerful, [Keys.SpecialModeState] = SpecialModeState.Off });
@@ -122,14 +103,19 @@ internal sealed class DaikinFtxm25DataProvider
     public async Task SetOff()
     {
         var info = await GetControlInfo();
-        info[Keys.Power] = Power.Off;
-        await SetControlInfo(info);
+        
+        if (info[Keys.Power] == Power.On)
+        {
+            info[Keys.Power] = Power.Off;
+            await SetControlInfo(info);
+        }
     }
 
     private async Task SetControlInfo(Dic dic)
     {
         var queryString = string.Join("&", dic.Select(kvp => $"{kvp.Key}={kvp.Value}"));
         var response = await _httpClient.PostAsync($"{_baseUrl}/aircon/set_control_info?{queryString}", null);
+        response.EnsureSuccessStatusCode();
         var resonseBody = await response.Content.ReadAsStringAsync();
     }
 
@@ -137,6 +123,7 @@ internal sealed class DaikinFtxm25DataProvider
     {
         var queryString = string.Join("&", dic.Select(kvp => $"{kvp.Key}={kvp.Value}"));
         var response = await _httpClient.PostAsync($"{_baseUrl}/aircon/set_special_mode?{queryString}", null);
+        response.EnsureSuccessStatusCode();
         var resonseBody = await response.Content.ReadAsStringAsync();
     }
 }
