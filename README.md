@@ -4,8 +4,8 @@ System tray application for Linux showing device information and sensor readouts
 
 ## External dependencies
 
-- GtkSharp (context menu)
-- libayatana-appindicator (system tray icon) https://github.com/AyatanaIndicators/libayatana-appindicator
+- Gtk (via GtkSharp) (context menu)
+- libayatana-appindicator (system tray icon)
 - notify-send (shows device information)
 
 ## Screenshots

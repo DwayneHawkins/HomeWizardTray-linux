@@ -18,6 +18,7 @@ internal sealed class AyatanaAppIndicator
     // extra/libayatana-appindicator 0.5.94-1
     // however this version is obsolete, should instead use libayatana-appindicator-glib but this version does not work
     const string LIB_INDICATOR = "libayatana-appindicator3";
+    //const string LIB_INDICATOR = "libayatana-appindicator-glib";
 
     [DllImport(LIB_INDICATOR)]
     private static extern IntPtr app_indicator_new(string id, string icon, Category category);
