@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
 using HomeWizardTray.DataProviders.Daikin;
 using HomeWizardTray.DataProviders.Daikin.Constants;
@@ -58,6 +59,7 @@ internal sealed class App : IDisposable
             new("SUNNY BOY"),
             new("Status", (_, _) => _commandQueue.Add(nameof(SmaShowStatus))),
             new("-"),
+            new("v" + Assembly.GetExecutingAssembly().GetName().Version),
             new("Logs", (_, _) => _commandQueue.Add(nameof(ShowLogs))),
             new("Quit", (_, _) =>
             {

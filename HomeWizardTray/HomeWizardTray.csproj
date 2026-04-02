@@ -6,6 +6,8 @@
         <ImplicitUsings>disable</ImplicitUsings>
         <UserSecretsId>HomeWizardTray</UserSecretsId>
         <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
+        <AssemblyVersion>1.0.*</AssemblyVersion>
+        <Deterministic>false</Deterministic>
     </PropertyGroup>
 
     <ItemGroup>

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using GLib;
 using HomeWizardTray.Util;
@@ -19,7 +20,7 @@ internal static class Program
     {
         var logPath = Path.Combine(AppContext.BaseDirectory, "log.txt");
         Log.Logger = new LoggerConfiguration().WriteTo.File(logPath).CreateLogger();
-        Log.Information("Starting app.");
+        Log.Information("Starting app (v{version})", Assembly.GetExecutingAssembly().GetName().Version);
 
         try
         {
