@@ -169,9 +169,9 @@ internal sealed class App
             var power = await _homeWizardP1DataProvider.GetPower();
 
             var info = $"🌞 Yielding {yield} W";
-            if (power.Import > 0) info += $"\n🔻 Drawing {power.Import} W";
             info += $"\n🏠 Consuming {yield + power.Import - power.Export} W";
-            if (power.Export > 0) info += $"\n👍🏻 Injecting {power.Export} W"; 
+            if (power.Import > 0) info += $"\n🔴 Drawing {power.Import} W";
+            if (power.Export > 0) info += $"\n🟢 Injecting {power.Export} W"; 
 
             ShowNotification("SMA Sunny Boy", info);
         }
