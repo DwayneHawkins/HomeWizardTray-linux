@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
 using HomeWizardTray.DataProviders.Daikin.Constants;
 using Dic = System.Collections.Generic.Dictionary<string, string>;
 
@@ -23,17 +22,13 @@ internal sealed class DaikinFtxm25DataProvider
     public async Task<Dic> GetControlInfo()
     {
         var response = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
-        var toQueryString = response.Replace(",", "&");
-        var kvs = HttpUtility.ParseQueryString(toQueryString);
-        return kvs.Cast<string>().ToDictionary(k => k, v => kvs[v]);
+        return ParseResponse(response);
     }
 
     public async Task<Dic> GetSensorInfo()
     {
-        var dataResponse = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_sensor_info");
-        var toQueryString = dataResponse.Replace(",", "&");
-        var kvs = HttpUtility.ParseQueryString(toQueryString);
-        return kvs.Cast<string>().ToDictionary(k => k, v => kvs[v]);
+        var response = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_sensor_info");
+        return ParseResponse(response);
     }
 
     public async Task SetMax()
@@ -103,7 +98,7 @@ internal sealed class DaikinFtxm25DataProvider
     public async Task SetOff()
     {
         var info = await GetControlInfo();
-        
+
         if (info[Keys.Power] == Power.On)
         {
             info[Keys.Power] = Power.Off;
@@ -116,7 +111,6 @@ internal sealed class DaikinFtxm25DataProvider
         var queryString = string.Join("&", dic.Select(kvp => $"{kvp.Key}={kvp.Value}"));
         var response = await _httpClient.PostAsync($"{_baseUrl}/aircon/set_control_info?{queryString}", null);
         response.EnsureSuccessStatusCode();
-        var resonseBody = await response.Content.ReadAsStringAsync();
     }
 
     private async Task SetSpecialMode(Dic dic)
@@ -124,6 +118,13 @@ internal sealed class DaikinFtxm25DataProvider
         var queryString = string.Join("&", dic.Select(kvp => $"{kvp.Key}={kvp.Value}"));
         var response = await _httpClient.PostAsync($"{_baseUrl}/aircon/set_special_mode?{queryString}", null);
         response.EnsureSuccessStatusCode();
-        var resonseBody = await response.Content.ReadAsStringAsync();
+    }
+
+    // Daikin responses are comma-separated key=value pairs, e.g. "ret=OK,pow=1,mode=3,stemp=18.0"
+    private static Dic ParseResponse(string response)
+    {
+        return response.Split(',')
+            .Select(x => x.Split('=', 2))
+            .ToDictionary(x => x[0], parts => parts[1]);
     }
 }

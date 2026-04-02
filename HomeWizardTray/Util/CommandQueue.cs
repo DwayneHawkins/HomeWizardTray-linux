@@ -1,10 +1,21 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HomeWizardTray.Util;
 
-internal class CommandQueue
+/// <summary>
+/// Decouples GTK menu callbacks from async device communication.
+/// GTK's main loop requires event handlers to be synchronous. The common workarounds don't work:
+/// - async void swallows exceptions and can crash the application.
+/// - sync-over-async (.Result / .GetAwaiter().GetResult()) deadlocks the GTK main loop thread,
+///   because the async continuation needs that same thread to resume.
+/// This queue sidesteps both issues: GTK callbacks stay fully synchronous (just Add() a command),
+/// while a background thread picks up commands and runs async device work on its own thread,
+/// free from GTK's SynchronizationContext. Capacity is limited to 1 to ensure sequential processing.
+/// </summary>
+internal class CommandQueue : IDisposable
 {
     private readonly BlockingCollection<string> _commands;
     public event EventHandler<CommandQueueEventArgs> OnCommand;
@@ -17,8 +28,10 @@ internal class CommandQueue
         {
             while (!_commands.IsCompleted)
             {
-                var command = _commands.Take(); // Blocking, waits for a new entry
-                OnCommand?.Invoke(this, new CommandQueueEventArgs(command));
+                if (_commands.TryTake(out var command, Timeout.Infinite))
+                {
+                    OnCommand?.Invoke(this, new CommandQueueEventArgs(command));
+                }
             }
         });
     }
@@ -27,9 +40,10 @@ internal class CommandQueue
     {
         _commands.Add(cmd);
     }
-}
 
-internal class CommandQueueEventArgs(string command) : EventArgs
-{
-    public string Command { get; } = command;
+    public void Dispose()
+    {
+        _commands.CompleteAdding();
+        _commands.Dispose();
+    }
 }

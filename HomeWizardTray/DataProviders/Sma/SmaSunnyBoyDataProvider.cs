@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using HomeWizardTray.DataProviders.Sma.Dto;
 
 namespace HomeWizardTray.DataProviders.Sma;
@@ -41,8 +42,10 @@ internal sealed class SmaSunnyBoyDataProvider
 
         await Logout();
 
-        var watt = responseBody.Split(':').Last().Split('}').First();
-        return watt == "null" ? 0 : int.Parse(watt);
+        // Response keys are dynamic/device-specific, so we use recursive descent ".." to find "val".
+        // Example response: { "result": { "0199-xxxxxCF8": { "6100_40263F00": { "1": [{ "val": 774 }] } } } }
+        var wattToken = JObject.Parse(responseBody).SelectToken("$.result..val");
+        return wattToken is null or { Type: JTokenType.Null } ? 0 : wattToken.Value<int>();
     }
 
     private async Task Login()
@@ -92,25 +95,24 @@ internal sealed class SmaSunnyBoyDataProvider
         _httpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
         _httpClient.DefaultRequestHeaders.Add("Referer", $"{_baseUrl}/");
 
-        if (_sid != null) // We have a sid, so construct and add the "auth" cookie
+        if (_sid == null) return; // We have a sid, so construct and add the "auth" cookie
+        
+        var user = UserInfo.Get(_appSettings.SmaSunnyBoyUser);
+        var role = new { bitMask = 4, title = _appSettings.SmaSunnyBoyUser, loginLevel = user.LoginLevel };
+        var user443 = new { role, username = user.Tag, sid = _sid };
+
+        var cookieValues = new Dictionary<string, object>
         {
-            var user = UserInfo.Get(_appSettings.SmaSunnyBoyUser);
-            var role = new { bitMask = 4, title = _appSettings.SmaSunnyBoyUser, loginLevel = user.LoginLevel };
-            var user443 = new { role, username = user.Tag, sid = _sid };
+            { "tmhDynamicLocale.locale", "en" },
+            { "deviceUsr443", _appSettings.SmaSunnyBoyUser },
+            { "deviceMode443", "PSK" },
+            { "user443", user443 },
+            { "deviceSid443", _sid },
+        };
 
-            var cookieValues = new Dictionary<string, object>
-            {
-                { "tmhDynamicLocale.locale", "en" },
-                { "deviceUsr443", _appSettings.SmaSunnyBoyUser },
-                { "deviceMode443", "PSK" },
-                { "user443", user443 },
-                { "deviceSid443", _sid },
-            };
+        static string escape(object obj) => Uri.EscapeDataString(JsonConvert.SerializeObject(obj));
+        var cookie = cookieValues.Aggregate("", (x, y) => x + $"{y.Key}={escape(y.Value)}; ");
 
-            static string Escape(object obj) => Uri.EscapeDataString(JsonConvert.SerializeObject(obj));
-            var cookie = cookieValues.Aggregate("", (x, y) => x + $"{y.Key}={Escape(y.Value)}; ");
-
-            _httpClient.DefaultRequestHeaders.Add("Cookie", cookie);
-        }
+        _httpClient.DefaultRequestHeaders.Add("Cookie", cookie);
     }
 }

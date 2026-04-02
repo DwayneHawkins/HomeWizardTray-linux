@@ -11,7 +11,7 @@ using Serilog;
 
 namespace HomeWizardTray;
 
-internal sealed class App
+internal sealed class App : IDisposable
 {
     private readonly HomeWizardP1DataProvider _homeWizardP1DataProvider;
     private readonly SmaSunnyBoyDataProvider _smaSunnyBoyDataProvider;
@@ -59,7 +59,11 @@ internal sealed class App
             new("Status", (_, _) => _commandQueue.Add(nameof(SmaShowStatus))),
             new("-"),
             new("Logs", (_, _) => _commandQueue.Add(nameof(ShowLogs))),
-            new("Quit", (_, _) => Gtk.Application.Quit())
+            new("Quit", (_, _) =>
+            {
+                Dispose();
+                Gtk.Application.Quit();
+            })
         ]);
     }
 
@@ -171,7 +175,7 @@ internal sealed class App
             var info = $"🌞 Yielding {yield} W";
             info += $"\n🏠 Consuming {yield + power.Import - power.Export} W";
             if (power.Import > 0) info += $"\n🔴 Drawing {power.Import} W";
-            if (power.Export > 0) info += $"\n🟢 Injecting {power.Export} W"; 
+            if (power.Export > 0) info += $"\n🟢 Injecting {power.Export} W";
 
             ShowNotification("SMA Sunny Boy", info);
         }
@@ -200,7 +204,7 @@ internal sealed class App
         try
         {
             var iconPath = Path.Combine(AppContext.BaseDirectory, "sun.png");
-            
+
             var psi = new ProcessStartInfo
             {
                 FileName = "notify-send", UseShellExecute = false,
@@ -219,7 +223,14 @@ internal sealed class App
 
     private static void HandleException(Exception ex, string message)
     {
+#pragma warning disable CA2254
         Log.Error(ex, message);
+#pragma warning restore CA2254
         ShowNotification("Error", message, isError: true);
+    }
+
+    public void Dispose()
+    {
+        _commandQueue.Dispose();
     }
 }
