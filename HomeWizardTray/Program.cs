@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Reflection;
+using Avalonia;
+using HomeWizardTray.DataProviders;
 using HomeWizardTray.Util;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,40 +14,42 @@ namespace HomeWizardTray;
 
 internal static class Program
 {
+    public static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
+    public static IHost AppHost { get; private set; }
+
     [STAThread]
-    public static void Main()
+    public static void Main(string[] args)
     {
         var logPath = Path.Combine(AppContext.BaseDirectory, "log.txt");
         Log.Logger = new LoggerConfiguration().WriteTo.File(logPath).CreateLogger();
 
         try
         {
-            var host = Host
+            AppHost = Host
                 .CreateDefaultBuilder()
                 .UseSerilog()
-                .ConfigureServices((ctx, services) =>
+                .ConfigureServices((_, services) =>
                 {
                     services.AddSingleton<AppSettings>();
-                    services.AddSingleton<CommandQueue>();
+                    services.AddSingleton<NotificationService>();
                     services.AddDataProviders();
-                    services.AddSingleton<App>();
                 })
-                .ConfigureAppConfiguration((ctx, builder) =>
-                {
-                    builder.AddUserSecrets<App>();
-                })
+                .ConfigureAppConfiguration((_, builder) => { builder.AddUserSecrets<App>(); })
                 .Build();
 
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
-                host.Dispose();
+                AppHost.Dispose();
                 Log.CloseAndFlush();
             };
 
-            var logger = host.Services.GetRequiredService<ILogger<App>>();
-            logger.LogInformation("Starting app version {Version}.", Assembly.GetExecutingAssembly().GetName().Version);
+            var logger = AppHost.Services.GetRequiredService<ILogger<App>>();
+            logger.LogInformation("Starting app version {Version}.", Version);
 
-            host.Services.GetRequiredService<App>().Start();
+            AppBuilder.Configure<App>()
+                .UsePlatformDetect()
+                .LogToTrace()
+                .StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
         {

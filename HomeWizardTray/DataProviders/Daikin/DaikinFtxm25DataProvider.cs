@@ -9,32 +9,22 @@ using Dic = System.Collections.Generic.Dictionary<string, string>;
 
 namespace HomeWizardTray.DataProviders.Daikin;
 
-internal sealed class DaikinFtxm25DataProvider
+internal sealed class DaikinFtxm25DataProvider(HttpClient httpClient, AppSettings appSettings, ILogger<DaikinFtxm25DataProvider> logger)
 {
-    private readonly HttpClient _httpClient;
-    private readonly AppSettings _appSettings;
-    private readonly ILogger<DaikinFtxm25DataProvider> _logger;
-    private readonly string _baseUrl;
-
-    public DaikinFtxm25DataProvider(HttpClient httpClient, AppSettings appSettings, ILogger<DaikinFtxm25DataProvider> logger)
-    {
-        _httpClient = httpClient;
-        _appSettings = appSettings;
-        _logger = logger;
-        _baseUrl = $"http://{_appSettings.DaikinFtxm25IpAddress}";
-    }
+    // This device doesn't seem to support HTTPS well
+    private readonly string _baseUrl = $"http://{appSettings.DaikinFtxm25IpAddress}";
 
     public async Task<ProviderResult<Dic>> GetControlInfo()
     {
         try
         {
-            var response = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
+            var response = await httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
             return ProviderResult<Dic>.Ok(ParseResponse(response));
         }
         catch (Exception ex)
         {
             const string msg = $"Could not get Daikin control info ({nameof(DaikinFtxm25DataProvider)}.{nameof(GetControlInfo)}).";
-            _logger.LogError(ex, msg);
+            logger.LogError(ex, msg);
             return ProviderResult<Dic>.Fail(msg);
         }
     }
@@ -43,13 +33,13 @@ internal sealed class DaikinFtxm25DataProvider
     {
         try
         {
-            var response = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_sensor_info");
+            var response = await httpClient.GetStringAsync($"{_baseUrl}/aircon/get_sensor_info");
             return ProviderResult<Dic>.Ok(ParseResponse(response));
         }
         catch (Exception ex)
         {
             const string msg = $"Could not get Daikin sensor info ({nameof(DaikinFtxm25DataProvider)}.{nameof(GetSensorInfo)}).";
-            _logger.LogError(ex, msg);
+            logger.LogError(ex, msg);
             return ProviderResult<Dic>.Fail(msg);
         }
     }
@@ -76,7 +66,7 @@ internal sealed class DaikinFtxm25DataProvider
         catch (Exception ex)
         {
             const string msg = $"Could not set Daikin to max mode ({nameof(DaikinFtxm25DataProvider)}.{nameof(SetMax)}).";
-            _logger.LogError(ex, msg);
+            logger.LogError(ex, msg);
             return ProviderResult.Fail(msg);
         }
     }
@@ -103,7 +93,7 @@ internal sealed class DaikinFtxm25DataProvider
         catch (Exception ex)
         {
             const string msg = $"Could not set Daikin to normal mode ({nameof(DaikinFtxm25DataProvider)}.{nameof(SetNormal)}).";
-            _logger.LogError(ex, msg);
+            logger.LogError(ex, msg);
             return ProviderResult.Fail(msg);
         }
     }
@@ -122,7 +112,7 @@ internal sealed class DaikinFtxm25DataProvider
                 [Keys.Thermostat] = "18.0",
                 [Keys.Humidity] = "0",
                 [Keys.FanSpeed] = FanSpeed.Silent,
-                [Keys.FanMotion] = FanMotion.None,
+                [Keys.FanMotion] = FanMotion.None
             });
 
             return ProviderResult.Ok();
@@ -130,7 +120,7 @@ internal sealed class DaikinFtxm25DataProvider
         catch (Exception ex)
         {
             const string msg = $"Could not set Daikin to eco mode ({nameof(DaikinFtxm25DataProvider)}.{nameof(SetEco)}).";
-            _logger.LogError(ex, msg);
+            logger.LogError(ex, msg);
             return ProviderResult.Fail(msg);
         }
     }
@@ -149,7 +139,7 @@ internal sealed class DaikinFtxm25DataProvider
                 [Keys.Thermostat] = "18.0",
                 [Keys.Humidity] = "0",
                 [Keys.FanSpeed] = FanSpeed.Auto,
-                [Keys.FanMotion] = FanMotion.None,
+                [Keys.FanMotion] = FanMotion.None
             });
 
             return ProviderResult.Ok();
@@ -157,7 +147,7 @@ internal sealed class DaikinFtxm25DataProvider
         catch (Exception ex)
         {
             const string msg = $"Could not set Daikin to dehumidify mode ({nameof(DaikinFtxm25DataProvider)}.{nameof(SetDehumidify)}).";
-            _logger.LogError(ex, msg);
+            logger.LogError(ex, msg);
             return ProviderResult.Fail(msg);
         }
     }
@@ -166,7 +156,7 @@ internal sealed class DaikinFtxm25DataProvider
     {
         try
         {
-            var info = await _httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
+            var info = await httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
             var dic = ParseResponse(info);
 
             if (dic[Keys.Power] == Power.On)
@@ -180,7 +170,7 @@ internal sealed class DaikinFtxm25DataProvider
         catch (Exception ex)
         {
             const string msg = $"Could not set Daikin to off ({nameof(DaikinFtxm25DataProvider)}.{nameof(SetOff)}).";
-            _logger.LogError(ex, msg);
+            logger.LogError(ex, msg);
             return ProviderResult.Fail(msg);
         }
     }
@@ -188,14 +178,14 @@ internal sealed class DaikinFtxm25DataProvider
     private async Task SetControlInfo(Dic dic)
     {
         var queryString = string.Join("&", dic.Select(kvp => $"{kvp.Key}={kvp.Value}"));
-        var response = await _httpClient.PostAsync($"{_baseUrl}/aircon/set_control_info?{queryString}", null);
+        var response = await httpClient.PostAsync($"{_baseUrl}/aircon/set_control_info?{queryString}", null);
         response.EnsureSuccessStatusCode();
     }
 
     private async Task SetSpecialMode(Dic dic)
     {
         var queryString = string.Join("&", dic.Select(kvp => $"{kvp.Key}={kvp.Value}"));
-        var response = await _httpClient.PostAsync($"{_baseUrl}/aircon/set_special_mode?{queryString}", null);
+        var response = await httpClient.PostAsync($"{_baseUrl}/aircon/set_special_mode?{queryString}", null);
         response.EnsureSuccessStatusCode();
     }
 

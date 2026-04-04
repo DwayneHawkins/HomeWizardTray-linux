@@ -6,12 +6,12 @@
         <ImplicitUsings>disable</ImplicitUsings>
         <UserSecretsId>HomeWizardTray</UserSecretsId>
         <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
-        <AssemblyVersion>1.0.0.1</AssemblyVersion>
+        <AssemblyVersion>1.1.0.0</AssemblyVersion>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="GdkSharp" Version="3.24.24.117-develop" />
-      <PackageReference Include="GtkSharp" Version="3.24.24.117-develop" />
+      <PackageReference Include="Avalonia.Desktop" Version="11.3.13" />
+      <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.13" />
       <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.5" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />

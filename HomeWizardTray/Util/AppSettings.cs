@@ -1,9 +1,9 @@
 ﻿using System;
-using Log = Serilog.Log;
 using HomeWizardTray.DataProviders.Sma;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
-namespace HomeWizardTray;
+namespace HomeWizardTray.Util;
 
 internal sealed class AppSettings
 {
@@ -13,7 +13,7 @@ internal sealed class AppSettings
     public UserType SmaSunnyBoyUser { get; set; }
     public string SmaSunnyBoyPass { get; set; }
 
-    public AppSettings(IConfiguration config)
+    public AppSettings(IConfiguration config, ILogger<AppSettings> logger)
     {
         try
         {
@@ -26,7 +26,7 @@ internal sealed class AppSettings
         }
         catch (Exception ex)
         {
-            Log.Error(ex, ex.Message);
+            logger.LogError(ex, "Could not bind AppSettings.");
             throw;
         }
     }

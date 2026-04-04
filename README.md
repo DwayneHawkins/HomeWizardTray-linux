@@ -1,12 +1,10 @@
 # HomeWizardTray
 
-System tray application for Linux showing device information and sensor readouts from my Daikin FTXM25, SMA Sunny Boy and HomeWizard P1 meter.
+System tray application showing device information and sensor readouts from my Daikin FTXM25, SMA Sunny Boy and HomeWizard P1 meter.
 
 ## External dependencies
 
-- Gtk (via GtkSharp) (context menu)
-- libayatana-appindicator (system tray icon)
-- notify-send (shows device information)
+- notify-send (shows device info notifications on linux)
 
 ## Screenshots
 

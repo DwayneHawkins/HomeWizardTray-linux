@@ -1,75 +1,86 @@
 using System;
 using System.IO;
 using System.Diagnostics;
-using System.Reflection;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
 using HomeWizardTray.DataProviders;
 using HomeWizardTray.DataProviders.Daikin;
 using HomeWizardTray.DataProviders.Daikin.Constants;
 using HomeWizardTray.DataProviders.HomeWizard;
 using HomeWizardTray.DataProviders.Sma;
 using HomeWizardTray.Util;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace HomeWizardTray;
 
-internal sealed class App : IDisposable
+internal sealed class App : Application
 {
-    private readonly HomeWizardP1DataProvider _homeWizardP1DataProvider;
-    private readonly SmaSunnyBoyDataProvider _smaSunnyBoyDataProvider;
-    private readonly DaikinFtxm25DataProvider _daikinFtxm25DataProvider;
-    
-    private readonly ILogger<App> _logger;
-    private readonly CommandQueue _commandQueue;
+    private HomeWizardP1DataProvider _homeWizardP1DataProvider;
+    private SmaSunnyBoyDataProvider _smaSunnyBoyDataProvider;
+    private DaikinFtxm25DataProvider _daikinFtxm25DataProvider;
+    private NotificationService _notificationService;
+    private ILogger<App> _logger;
 
-    public App(
-        HomeWizardP1DataProvider homeWizardP1DataProvider,
-        SmaSunnyBoyDataProvider smaSunnyBoyDataProvider,
-        DaikinFtxm25DataProvider daikinFtxm25DataProvider,
-        CommandQueue commandQueue,
-        ILogger<App> logger)
+    public override void OnFrameworkInitializationCompleted()
     {
-        _homeWizardP1DataProvider = homeWizardP1DataProvider;
-        _smaSunnyBoyDataProvider = smaSunnyBoyDataProvider;
-        _daikinFtxm25DataProvider = daikinFtxm25DataProvider;
-        _commandQueue = commandQueue;
-        _commandQueue.OnCommand += async (_, evt) => await evt.Action();
-        _logger = logger;
+        var services = Program.AppHost.Services;
+        _homeWizardP1DataProvider = services.GetRequiredService<HomeWizardP1DataProvider>();
+        _smaSunnyBoyDataProvider = services.GetRequiredService<SmaSunnyBoyDataProvider>();
+        _daikinFtxm25DataProvider = services.GetRequiredService<DaikinFtxm25DataProvider>();
+        _notificationService = services.GetRequiredService<NotificationService>();
+        _logger = services.GetRequiredService<ILogger<App>>();
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "sun.png");
+            var trayIcon = new TrayIcon
+            {
+                Icon = new WindowIcon(new Bitmap(iconPath)),
+                ToolTipText = $"HomeWizardTray v{Program.Version}",
+                IsVisible = true,
+                Menu = BuildMenu(desktop)
+            };
+            trayIcon.Clicked += async (_, _) => await SmaShowStatus();
+            TrayIcon.SetIcons(this, [trayIcon]);
+        }
+
+        base.OnFrameworkInitializationCompleted();
     }
 
-    public void Start()
+    private NativeMenu BuildMenu(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        Gtk.Application.Init();
-        var menu = BuildMenu();
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "sun.png");
-        var trayIcon = new AyatanaAppIndicator(menu.Handle, iconPath);
-        Gtk.Application.Run();
-    }
-
-    private Gtk.Menu BuildMenu()
-    {
-        return GtkMenuBuilder.Build(
+        return AvaloniaMenuBuilder.Build(
         [
             new("DAIKIN"),
             new("Mode",
             [
-                new("Normal", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetNormal()))),
-                new("Max", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetMax()))),
-                new("Eco", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetEco()))),
-                new("Dehumidify", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetDehumidify()))),
-                new("Off", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetOff())))
+                new("Normal", () => HandleProviderResult(_daikinFtxm25DataProvider.SetNormal())),
+                new("Max", () => HandleProviderResult(_daikinFtxm25DataProvider.SetMax())),
+                new("Eco", () => HandleProviderResult(_daikinFtxm25DataProvider.SetEco())),
+                new("Dehumidify", () => HandleProviderResult(_daikinFtxm25DataProvider.SetDehumidify())),
+                new("Off", () => HandleProviderResult(_daikinFtxm25DataProvider.SetOff()))
             ]),
-            new("Status", (_, _) => _commandQueue.Add(DaikinShowStatus)),
+            new("Status", DaikinShowStatus),
             new("-"),
             new("SUNNY BOY"),
-            new("Status", (_, _) => _commandQueue.Add(SmaShowStatus)),
+            new("Status", SmaShowStatus),
             new("-"),
-            new("v" + Assembly.GetExecutingAssembly().GetName().Version),
-            new("Logs", (_, _) => _commandQueue.Add(ShowLogs)),
-            new("Quit", (_, _) =>
+            new("v" + Program.Version),
+            new("Logs", () =>
             {
-                Dispose();
-                Gtk.Application.Quit();
+                ShowLogs();
+                return Task.CompletedTask;
+            }),
+            new("Quit", () =>
+            {
+                desktop.Shutdown();
+                return Task.CompletedTask;
             })
         ]);
     }
@@ -79,25 +90,25 @@ internal sealed class App : IDisposable
         var result = await task;
         if (!result.Success)
         {
-            ShowNotification("Error", result.ErrorMessage, isError: true);
+            _notificationService.ShowError("Error", result.ErrorMessage);
         }
     }
 
     private async Task DaikinShowStatus()
     {
         var infoResult = await _daikinFtxm25DataProvider.GetControlInfo();
-        
+
         if (!infoResult.Success)
         {
-            ShowNotification("Error", infoResult.ErrorMessage, isError: true);
+            _notificationService.ShowError("Error", infoResult.ErrorMessage);
             return;
         }
 
         var tempResult = await _daikinFtxm25DataProvider.GetSensorInfo();
-        
+
         if (!tempResult.Success)
         {
-            ShowNotification("Error", tempResult.ErrorMessage, isError: true);
+            _notificationService.ShowError("Error", tempResult.ErrorMessage);
             return;
         }
 
@@ -111,24 +122,24 @@ internal sealed class App : IDisposable
 
         var temps = $"🌡️️ Room is {temp[Keys.InsideTemp]} °C\n🌳 Outside is {temp[Keys.OutsideTemp]} °C";
 
-        ShowNotification("Daikin FTXM25", $"{mode}\n{temps}");
+        _notificationService.ShowInfo("Daikin FTXM25", $"{mode}\n{temps}");
     }
 
     private async Task SmaShowStatus()
     {
         var yieldResult = await _smaSunnyBoyDataProvider.GetYield();
-        
+
         if (!yieldResult.Success)
         {
-            ShowNotification("Error", yieldResult.ErrorMessage, isError: true);
+            _notificationService.ShowError("Error", yieldResult.ErrorMessage);
             return;
         }
 
         var powerResult = await _homeWizardP1DataProvider.GetPower();
-        
+
         if (!powerResult.Success)
         {
-            ShowNotification("Error", powerResult.ErrorMessage, isError: true);
+            _notificationService.ShowError("Error", powerResult.ErrorMessage);
             return;
         }
 
@@ -140,10 +151,10 @@ internal sealed class App : IDisposable
         if (power.Import > 0) info += $"\n🔴 Drawing {power.Import} W";
         if (power.Export > 0) info += $"\n🟢 Injecting {power.Export} W";
 
-        ShowNotification("SMA Sunny Boy", info);
+        _notificationService.ShowInfo("SMA Sunny Boy", info);
     }
 
-    private Task ShowLogs()
+    private void ShowLogs()
     {
         try
         {
@@ -155,36 +166,7 @@ internal sealed class App : IDisposable
         {
             const string msg = "Could not open log file.";
             _logger.LogError(ex, msg);
-            ShowNotification("Error", msg, isError: true);
+            _notificationService.ShowError("Error", msg);
         }
-
-        return Task.CompletedTask;
-    }
-
-    private void ShowNotification(string title, string message, bool isError = false)
-    {
-        try
-        {
-            var iconPath = Path.Combine(AppContext.BaseDirectory, "sun.png");
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = "notify-send", UseShellExecute = false,
-                Arguments = isError
-                    ? $"-a HomeWizardTray -u critical \"{title}\" \"{message}\""
-                    : $"-a HomeWizardTray -i {iconPath} -t 10000 \"{title}\" \"{message}\""
-            };
-
-            Process.Start(psi);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Could not invoke \"notify-send\".");
-        }
-    }
-
-    public void Dispose()
-    {
-        _commandQueue.Dispose();
     }
 }
