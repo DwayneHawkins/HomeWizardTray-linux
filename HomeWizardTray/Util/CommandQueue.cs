@@ -17,28 +17,28 @@ namespace HomeWizardTray.Util;
 /// </summary>
 internal class CommandQueue : IDisposable
 {
-    private readonly BlockingCollection<string> _commands;
+    private readonly BlockingCollection<Func<Task>> _commands;
     public event EventHandler<CommandQueueEventArgs> OnCommand;
 
     public CommandQueue()
     {
-        _commands = new BlockingCollection<string>(1);
+        _commands = new BlockingCollection<Func<Task>>(1);
 
         Task.Run(() =>
         {
             while (!_commands.IsCompleted)
             {
-                if (_commands.TryTake(out var command, Timeout.Infinite))
+                if (_commands.TryTake(out var action, Timeout.Infinite))
                 {
-                    OnCommand?.Invoke(this, new CommandQueueEventArgs(command));
+                    OnCommand?.Invoke(this, new CommandQueueEventArgs(action));
                 }
             }
         });
     }
 
-    public void Add(string cmd)
+    public void Add(Func<Task> action)
     {
-        _commands.Add(cmd);
+        _commands.Add(action);
     }
 
     public void Dispose()

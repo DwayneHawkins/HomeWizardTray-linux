@@ -1,8 +1,9 @@
 using System;
+using System.Threading.Tasks;
 
 namespace HomeWizardTray.Util;
 
-internal class CommandQueueEventArgs(string command) : EventArgs
+internal class CommandQueueEventArgs(Func<Task> action) : EventArgs
 {
-    public string Command { get; } = command;
+    public Func<Task> Action { get; } = action;
 }

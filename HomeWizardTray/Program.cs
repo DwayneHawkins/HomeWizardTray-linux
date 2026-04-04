@@ -1,15 +1,12 @@
 using System;
 using System.IO;
 using System.Reflection;
-using System.Threading;
-using GLib;
 using HomeWizardTray.Util;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 using Serilog;
-using Log = Serilog.Log;
 
 namespace HomeWizardTray;
 
@@ -20,19 +17,16 @@ internal static class Program
     {
         var logPath = Path.Combine(AppContext.BaseDirectory, "log.txt");
         Log.Logger = new LoggerConfiguration().WriteTo.File(logPath).CreateLogger();
-        Log.Information("Starting app (v{version})", Assembly.GetExecutingAssembly().GetName().Version);
 
         try
         {
-            var config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", false, false)
-                .Build();
-
             var host = Host
                 .CreateDefaultBuilder()
+                .UseSerilog()
                 .ConfigureServices((ctx, services) =>
                 {
                     services.AddSingleton<AppSettings>();
+                    services.AddSingleton<CommandQueue>();
                     services.AddDataProviders();
                     services.AddSingleton<App>();
                 })
@@ -45,8 +39,11 @@ internal static class Program
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
                 host.Dispose();
-                Log.Information("Exited app.");
+                Log.CloseAndFlush();
             };
+
+            var logger = host.Services.GetRequiredService<ILogger<App>>();
+            logger.LogInformation("Starting app (v{Version})", Assembly.GetExecutingAssembly().GetName().Version);
 
             host.Services.GetRequiredService<App>().Start();
         }

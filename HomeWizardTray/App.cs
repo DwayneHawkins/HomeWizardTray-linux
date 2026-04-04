@@ -8,7 +8,7 @@ using HomeWizardTray.DataProviders.Daikin.Constants;
 using HomeWizardTray.DataProviders.HomeWizard;
 using HomeWizardTray.DataProviders.Sma;
 using HomeWizardTray.Util;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace HomeWizardTray;
 
@@ -17,19 +17,22 @@ internal sealed class App : IDisposable
     private readonly HomeWizardP1DataProvider _homeWizardP1DataProvider;
     private readonly SmaSunnyBoyDataProvider _smaSunnyBoyDataProvider;
     private readonly DaikinFtxm25DataProvider _daikinFtxm25DataProvider;
+    private readonly ILogger<App> _logger;
     private readonly CommandQueue _commandQueue;
 
     public App(
         HomeWizardP1DataProvider homeWizardP1DataProvider,
         SmaSunnyBoyDataProvider smaSunnyBoyDataProvider,
-        DaikinFtxm25DataProvider daikinFtxm25DataProvider)
+        DaikinFtxm25DataProvider daikinFtxm25DataProvider,
+        CommandQueue commandQueue,
+        ILogger<App> logger)
     {
         _homeWizardP1DataProvider = homeWizardP1DataProvider;
         _smaSunnyBoyDataProvider = smaSunnyBoyDataProvider;
         _daikinFtxm25DataProvider = daikinFtxm25DataProvider;
-
-        _commandQueue = new CommandQueue();
-        _commandQueue.OnCommand += OnCommand;
+        _commandQueue = commandQueue;
+        _commandQueue.OnCommand += async (_, evt) => await evt.Action();
+        _logger = logger;
     }
 
     public void Start()
@@ -48,19 +51,23 @@ internal sealed class App : IDisposable
             new("DAIKIN"),
             new("Mode",
             [
-                new("Normal", (_, _) => _commandQueue.Add(nameof(DaikinSetNormal))),
-                new("Max", (_, _) => _commandQueue.Add(nameof(DaikinSetMax))),
-                new("Eco", (_, _) => _commandQueue.Add(nameof(DaikinSetEco))),
-                new("Dehumidify", (_, _) => _commandQueue.Add(nameof(DaikinSetDehumidify))),
-                new("Off", (_, _) => _commandQueue.Add(nameof(DaikinSetOff)))
+                new("Normal", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetNormal, "Could not set Daikin to normal mode."))),
+                new("Max", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetMax, "Could not set Daikin to max mode."))),
+                new("Eco", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetEco, "Could not set Daikin to eco mode."))),
+                new("Dehumidify", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetDehumidify, "Could not set Daikin to dehumidify mode."))),
+                new("Off", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetOff, "Could not set Daikin to off.")))
             ]),
-            new("Status", (_, _) => _commandQueue.Add(nameof(DaikinShowStatus))),
+            new("Status", (_, _) => _commandQueue.Add(DaikinShowStatus)),
             new("-"),
             new("SUNNY BOY"),
-            new("Status", (_, _) => _commandQueue.Add(nameof(SmaShowStatus))),
+            new("Status", (_, _) => _commandQueue.Add(SmaShowStatus)),
             new("-"),
             new("v" + Assembly.GetExecutingAssembly().GetName().Version),
-            new("Logs", (_, _) => _commandQueue.Add(nameof(ShowLogs))),
+            new("Logs", (_, _) => _commandQueue.Add(() =>
+            {
+                ShowLogs();
+                return Task.CompletedTask;
+            })),
             new("Quit", (_, _) =>
             {
                 Dispose();
@@ -69,78 +76,15 @@ internal sealed class App : IDisposable
         ]);
     }
 
-    private async void OnCommand(object sender, CommandQueueEventArgs evt)
-    {
-        switch (evt.Command)
-        {
-            case nameof(DaikinSetNormal): await DaikinSetNormal(); break;
-            case nameof(DaikinSetMax): await DaikinSetMax(); break;
-            case nameof(DaikinSetEco): await DaikinSetEco(); break;
-            case nameof(DaikinSetDehumidify): await DaikinSetDehumidify(); break;
-            case nameof(DaikinSetOff): await DaikinSetOff(); break;
-            case nameof(DaikinShowStatus): await DaikinShowStatus(); break;
-            case nameof(SmaShowStatus): await SmaShowStatus(); break;
-            case nameof(ShowLogs): ShowLogs(); break;
-        }
-    }
-
-    private async Task DaikinSetNormal()
+    private async Task ExecuteDaikinCommand(Func<Task> action, string errorMessage)
     {
         try
         {
-            await _daikinFtxm25DataProvider.SetNormal();
+            await action();
         }
         catch (Exception ex)
         {
-            HandleException(ex, "Could not set Daikin to normal mode.");
-        }
-    }
-
-    private async Task DaikinSetMax()
-    {
-        try
-        {
-            await _daikinFtxm25DataProvider.SetMax();
-        }
-        catch (Exception ex)
-        {
-            HandleException(ex, "Could not set Daikin to max mode.");
-        }
-    }
-
-    private async Task DaikinSetDehumidify()
-    {
-        try
-        {
-            await _daikinFtxm25DataProvider.SetDehumidify();
-        }
-        catch (Exception ex)
-        {
-            HandleException(ex, "Could not set Daikin to dehumidify mode.");
-        }
-    }
-
-    private async Task DaikinSetOff()
-    {
-        try
-        {
-            await _daikinFtxm25DataProvider.SetOff();
-        }
-        catch (Exception ex)
-        {
-            HandleException(ex, "Could not set Daikin to off.");
-        }
-    }
-
-    private async Task DaikinSetEco()
-    {
-        try
-        {
-            await _daikinFtxm25DataProvider.SetEco();
-        }
-        catch (Exception ex)
-        {
-            HandleException(ex, "Could not set Daikin to eco mode.");
+            HandleException(ex, errorMessage);
         }
     }
 
@@ -187,7 +131,7 @@ internal sealed class App : IDisposable
         }
     }
 
-    private static void ShowLogs()
+    private void ShowLogs()
     {
         try
         {
@@ -201,7 +145,7 @@ internal sealed class App : IDisposable
         }
     }
 
-    private static void ShowNotification(string title, string message, bool isError = false)
+    private void ShowNotification(string title, string message, bool isError = false)
     {
         try
         {
@@ -219,15 +163,13 @@ internal sealed class App : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not invoke notify-send.");
+            _logger.LogError(ex, "Could not invoke notify-send");
         }
     }
 
-    private static void HandleException(Exception ex, string message)
+    private void HandleException(Exception ex, string message)
     {
-#pragma warning disable CA2254
-        Log.Error(ex, message);
-#pragma warning restore CA2254
+        _logger.LogError(ex, "{Message}", message);
         ShowNotification("Error", message, isError: true);
     }
 
