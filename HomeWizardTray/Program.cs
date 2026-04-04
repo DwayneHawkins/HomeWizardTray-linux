@@ -43,7 +43,7 @@ internal static class Program
             };
 
             var logger = host.Services.GetRequiredService<ILogger<App>>();
-            logger.LogInformation("Starting app (v{Version})", Assembly.GetExecutingAssembly().GetName().Version);
+            logger.LogInformation("Starting app version {Version}.", Assembly.GetExecutingAssembly().GetName().Version);
 
             host.Services.GetRequiredService<App>().Start();
         }

@@ -13,3 +13,4 @@
 /dataSources.local.xml
 [Bb]in/
 [Oo]bj/
+*.DotSettings.*

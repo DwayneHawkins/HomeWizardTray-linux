@@ -3,6 +3,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using HomeWizardTray.DataProviders;
 using HomeWizardTray.DataProviders.Daikin;
 using HomeWizardTray.DataProviders.Daikin.Constants;
 using HomeWizardTray.DataProviders.HomeWizard;
@@ -17,6 +18,7 @@ internal sealed class App : IDisposable
     private readonly HomeWizardP1DataProvider _homeWizardP1DataProvider;
     private readonly SmaSunnyBoyDataProvider _smaSunnyBoyDataProvider;
     private readonly DaikinFtxm25DataProvider _daikinFtxm25DataProvider;
+    
     private readonly ILogger<App> _logger;
     private readonly CommandQueue _commandQueue;
 
@@ -51,11 +53,11 @@ internal sealed class App : IDisposable
             new("DAIKIN"),
             new("Mode",
             [
-                new("Normal", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetNormal, "Could not set Daikin to normal mode."))),
-                new("Max", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetMax, "Could not set Daikin to max mode."))),
-                new("Eco", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetEco, "Could not set Daikin to eco mode."))),
-                new("Dehumidify", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetDehumidify, "Could not set Daikin to dehumidify mode."))),
-                new("Off", (_, _) => _commandQueue.Add(() => ExecuteDaikinCommand(_daikinFtxm25DataProvider.SetOff, "Could not set Daikin to off.")))
+                new("Normal", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetNormal()))),
+                new("Max", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetMax()))),
+                new("Eco", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetEco()))),
+                new("Dehumidify", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetDehumidify()))),
+                new("Off", (_, _) => _commandQueue.Add(() => HandleProviderResult(_daikinFtxm25DataProvider.SetOff())))
             ]),
             new("Status", (_, _) => _commandQueue.Add(DaikinShowStatus)),
             new("-"),
@@ -63,11 +65,7 @@ internal sealed class App : IDisposable
             new("Status", (_, _) => _commandQueue.Add(SmaShowStatus)),
             new("-"),
             new("v" + Assembly.GetExecutingAssembly().GetName().Version),
-            new("Logs", (_, _) => _commandQueue.Add(() =>
-            {
-                ShowLogs();
-                return Task.CompletedTask;
-            })),
+            new("Logs", (_, _) => _commandQueue.Add(ShowLogs)),
             new("Quit", (_, _) =>
             {
                 Dispose();
@@ -76,62 +74,76 @@ internal sealed class App : IDisposable
         ]);
     }
 
-    private async Task ExecuteDaikinCommand(Func<Task> action, string errorMessage)
+    private async Task HandleProviderResult(Task<ProviderResult> task)
     {
-        try
+        var result = await task;
+        if (!result.Success)
         {
-            await action();
-        }
-        catch (Exception ex)
-        {
-            HandleException(ex, errorMessage);
+            ShowNotification("Error", result.ErrorMessage, isError: true);
         }
     }
 
     private async Task DaikinShowStatus()
     {
-        try
+        var infoResult = await _daikinFtxm25DataProvider.GetControlInfo();
+        
+        if (!infoResult.Success)
         {
-            var info = await _daikinFtxm25DataProvider.GetControlInfo();
-            var temp = await _daikinFtxm25DataProvider.GetSensorInfo();
-
-            var isOn = info[Keys.Power] == Power.On;
-
-            var mode = isOn
-                ? $"⚡ {Mode.GetName(info[Keys.Mode])} to {info[Keys.Thermostat]} °C\n🌬️ Fans at {FanSpeed.GetName(info[Keys.FanSpeed])}"
-                : "⚡ Power off";
-
-            var temps = $"🌡️️ Room is {temp[Keys.InsideTemp]} °C\n🌳 Outside is {temp[Keys.OutsideTemp]} °C";
-
-            ShowNotification("Daikin FTXM25", $"{mode}\n{temps}");
+            ShowNotification("Error", infoResult.ErrorMessage, isError: true);
+            return;
         }
-        catch (Exception ex)
+
+        var tempResult = await _daikinFtxm25DataProvider.GetSensorInfo();
+        
+        if (!tempResult.Success)
         {
-            HandleException(ex, "Could not get Daikin status.");
+            ShowNotification("Error", tempResult.ErrorMessage, isError: true);
+            return;
         }
+
+        var info = infoResult.Value;
+        var temp = tempResult.Value;
+        var isOn = info[Keys.Power] == Power.On;
+
+        var mode = isOn
+            ? $"⚡ {Mode.GetName(info[Keys.Mode])} to {info[Keys.Thermostat]} °C\n🌬️ Fans at {FanSpeed.GetName(info[Keys.FanSpeed])}"
+            : "⚡ Power off";
+
+        var temps = $"🌡️️ Room is {temp[Keys.InsideTemp]} °C\n🌳 Outside is {temp[Keys.OutsideTemp]} °C";
+
+        ShowNotification("Daikin FTXM25", $"{mode}\n{temps}");
     }
 
     private async Task SmaShowStatus()
     {
-        try
+        var yieldResult = await _smaSunnyBoyDataProvider.GetYield();
+        
+        if (!yieldResult.Success)
         {
-            var yield = await _smaSunnyBoyDataProvider.GetYield();
-            var power = await _homeWizardP1DataProvider.GetPower();
-
-            var info = $"🌞 Yielding {yield} W";
-            info += $"\n🏠 Consuming {yield + power.Import - power.Export} W";
-            if (power.Import > 0) info += $"\n🔴 Drawing {power.Import} W";
-            if (power.Export > 0) info += $"\n🟢 Injecting {power.Export} W";
-
-            ShowNotification("SMA Sunny Boy", info);
+            ShowNotification("Error", yieldResult.ErrorMessage, isError: true);
+            return;
         }
-        catch (Exception ex)
+
+        var powerResult = await _homeWizardP1DataProvider.GetPower();
+        
+        if (!powerResult.Success)
         {
-            HandleException(ex, "Could not get Sunny Boy status.");
+            ShowNotification("Error", powerResult.ErrorMessage, isError: true);
+            return;
         }
+
+        var yield = yieldResult.Value;
+        var power = powerResult.Value;
+
+        var info = $"🌞 Yielding {yield} W";
+        info += $"\n🏠 Consuming {yield + power.Import - power.Export} W";
+        if (power.Import > 0) info += $"\n🔴 Drawing {power.Import} W";
+        if (power.Export > 0) info += $"\n🟢 Injecting {power.Export} W";
+
+        ShowNotification("SMA Sunny Boy", info);
     }
 
-    private void ShowLogs()
+    private Task ShowLogs()
     {
         try
         {
@@ -141,8 +153,12 @@ internal sealed class App : IDisposable
         }
         catch (Exception ex)
         {
-            HandleException(ex, "Could not open log file.");
+            const string msg = "Could not open log file.";
+            _logger.LogError(ex, msg);
+            ShowNotification("Error", msg, isError: true);
         }
+
+        return Task.CompletedTask;
     }
 
     private void ShowNotification(string title, string message, bool isError = false)
@@ -163,14 +179,8 @@ internal sealed class App : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Could not invoke notify-send");
+            _logger.LogError(ex, "Could not invoke \"notify-send\".");
         }
-    }
-
-    private void HandleException(Exception ex, string message)
-    {
-        _logger.LogError(ex, "{Message}", message);
-        ShowNotification("Error", message, isError: true);
     }
 
     public void Dispose()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using HomeWizardTray.DataProviders.Sma.Dto;
+using HomeWizardTray.Util;
+using Microsoft.Extensions.Logging;
 
 namespace HomeWizardTray.DataProviders.Sma;
 
@@ -14,38 +16,51 @@ internal sealed class SmaSunnyBoyDataProvider
 {
     private readonly HttpClient _httpClient;
     private readonly AppSettings _appSettings;
+    private readonly ILogger<SmaSunnyBoyDataProvider> _logger;
     private readonly string _baseUrl;
 
     private string _sid;
 
-    public SmaSunnyBoyDataProvider(HttpClient httpClient, AppSettings appSettings)
+    public SmaSunnyBoyDataProvider(HttpClient httpClient, AppSettings appSettings, ILogger<SmaSunnyBoyDataProvider> logger)
     {
         _httpClient = httpClient;
         _appSettings = appSettings;
+        _logger = logger;
         _baseUrl = $"https://{_appSettings.SmaSunnyBoyIpAddress}";
     }
 
-    public async Task<int> GetYield()
+    public async Task<ProviderResult<int>> GetYield()
     {
-        await Login();
-
-        ClearAndSetHeaders();
-
-        var postData = new Dictionary<string, object>
+        try
         {
-            { "keys", new List<string> { "6100_40263F00" } },
-            { "destDev", new List<object>() }
-        };
+            await Login();
 
-        var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/dyn/getValues.json?sid={_sid}", postData);
-        var responseBody = await response.Content.ReadAsStringAsync();
+            ClearAndSetHeaders();
 
-        await Logout();
+            var postData = new Dictionary<string, object>
+            {
+                { "keys", new List<string> { "6100_40263F00" } },
+                { "destDev", new List<object>() }
+            };
 
-        // Response keys are dynamic/device-specific, so we use recursive descent ".." to find "val".
-        // Example response: { "result": { "0199-xxxxxCF8": { "6100_40263F00": { "1": [{ "val": 774 }] } } } }
-        var wattToken = JObject.Parse(responseBody).SelectToken("$.result..val");
-        return wattToken is null or { Type: JTokenType.Null } ? 0 : wattToken.Value<int>();
+            var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/dyn/getValues.json?sid={_sid}", postData);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            await Logout();
+
+            // Response keys are dynamic/device-specific, so we use recursive descent ".." to find "val".
+            // Example response: { "result": { "0199-xxxxxCF8": { "6100_40263F00": { "1": [{ "val": 774 }] } } } }
+            var wattToken = JObject.Parse(responseBody).SelectToken("$.result..val");
+            var value = wattToken is null or { Type: JTokenType.Null } ? 0 : wattToken.Value<int>();
+
+            return ProviderResult<int>.Ok(value);
+        }
+        catch (Exception ex)
+        {
+            const string msg = $"Could not get Sunny Boy yield ({nameof(SmaSunnyBoyDataProvider)}.{nameof(GetYield)}).";
+            _logger.LogError(ex, msg);
+            return ProviderResult<int>.Fail(msg);
+        }
     }
 
     private async Task Login()
@@ -96,7 +111,7 @@ internal sealed class SmaSunnyBoyDataProvider
         _httpClient.DefaultRequestHeaders.Add("Referer", $"{_baseUrl}/");
 
         if (_sid == null) return; // We have a sid, so construct and add the "auth" cookie
-        
+
         var user = UserInfo.Get(_appSettings.SmaSunnyBoyUser);
         var role = new { bitMask = 4, title = _appSettings.SmaSunnyBoyUser, loginLevel = user.LoginLevel };
         var user443 = new { role, username = user.Tag, sid = _sid };
