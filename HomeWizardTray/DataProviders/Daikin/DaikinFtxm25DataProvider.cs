@@ -14,33 +14,45 @@ internal sealed class DaikinFtxm25DataProvider(HttpClient httpClient, AppSetting
     // This device doesn't seem to support HTTPS well
     private readonly string _baseUrl = $"http://{appSettings.DaikinFtxm25IpAddress}";
 
-    public async Task<ProviderResult<Dic>> GetControlInfo()
+    public async Task<ProviderResult<ControlInfo>> GetControlInfo()
     {
         try
         {
             var response = await httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
-            return ProviderResult<Dic>.Ok(ParseResponse(response));
+            var dic = ParseToDictionary(response);
+            return ProviderResult<ControlInfo>.Ok(new ControlInfo
+            {
+                Power = dic[Keys.Power],
+                Mode = dic[Keys.Mode],
+                Thermostat = dic[Keys.Thermostat],
+                FanSpeed = dic[Keys.FanSpeed]
+            });
         }
         catch (Exception ex)
         {
             const string msg = $"Could not get Daikin control info ({nameof(DaikinFtxm25DataProvider)}.{nameof(GetControlInfo)}).";
             logger.LogError(ex, msg);
-            return ProviderResult<Dic>.Fail(msg);
+            return ProviderResult<ControlInfo>.Fail(msg);
         }
     }
 
-    public async Task<ProviderResult<Dic>> GetSensorInfo()
+    public async Task<ProviderResult<SensorInfo>> GetSensorInfo()
     {
         try
         {
             var response = await httpClient.GetStringAsync($"{_baseUrl}/aircon/get_sensor_info");
-            return ProviderResult<Dic>.Ok(ParseResponse(response));
+            var dic = ParseToDictionary(response);
+            return ProviderResult<SensorInfo>.Ok(new SensorInfo
+            {
+                InsideTemp = dic[Keys.InsideTemp],
+                OutsideTemp = dic[Keys.OutsideTemp]
+            });
         }
         catch (Exception ex)
         {
             const string msg = $"Could not get Daikin sensor info ({nameof(DaikinFtxm25DataProvider)}.{nameof(GetSensorInfo)}).";
             logger.LogError(ex, msg);
-            return ProviderResult<Dic>.Fail(msg);
+            return ProviderResult<SensorInfo>.Fail(msg);
         }
     }
 
@@ -157,7 +169,7 @@ internal sealed class DaikinFtxm25DataProvider(HttpClient httpClient, AppSetting
         try
         {
             var info = await httpClient.GetStringAsync($"{_baseUrl}/aircon/get_control_info");
-            var dic = ParseResponse(info);
+            var dic = ParseToDictionary(info);
 
             if (dic[Keys.Power] == Power.On)
             {
@@ -190,7 +202,7 @@ internal sealed class DaikinFtxm25DataProvider(HttpClient httpClient, AppSetting
     }
 
     // Daikin responses are comma-separated key=value pairs, e.g. "ret=OK,pow=1,mode=3,stemp=18.0"
-    private static Dic ParseResponse(string response)
+    private static Dic ParseToDictionary(string response)
     {
         return response.Split(',')
             .Select(x => x.Split('=', 2))

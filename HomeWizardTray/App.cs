@@ -97,15 +97,14 @@ internal sealed class App : Application
     private async Task DaikinShowStatus()
     {
         var infoResult = await _daikinFtxm25DataProvider.GetControlInfo();
+        var tempResult = await _daikinFtxm25DataProvider.GetSensorInfo();
 
         if (!infoResult.Success)
         {
             _notificationService.ShowError("Error", infoResult.ErrorMessage);
             return;
         }
-
-        var tempResult = await _daikinFtxm25DataProvider.GetSensorInfo();
-
+        
         if (!tempResult.Success)
         {
             _notificationService.ShowError("Error", tempResult.ErrorMessage);
@@ -114,15 +113,28 @@ internal sealed class App : Application
 
         var info = infoResult.Value;
         var temp = tempResult.Value;
-        var isOn = info[Keys.Power] == Power.On;
+        
+        var status = "⚡ Power off\n";
 
-        var mode = isOn
-            ? $"⚡ {Mode.GetName(info[Keys.Mode])} to {info[Keys.Thermostat]} °C\n🌬️ Fans at {FanSpeed.GetName(info[Keys.FanSpeed])}"
-            : "⚡ Power off";
+        if (info.Power == Power.On)
+        {
+            status = $"⚡ {Mode.GetName(info.Mode)}";
 
-        var temps = $"🌡️️ Room is {temp[Keys.InsideTemp]} °C\n🌳 Outside is {temp[Keys.OutsideTemp]} °C";
+            if (info.Mode is Mode.Cooling or Mode.Heating)
+            {
+                status += $" to {info.Thermostat} °C\n";
+                status += $"🌬️ Fans at {FanSpeed.GetName(info.FanSpeed)}\n";
+            }
+            else
+            {
+                status += "\n";
+            }
+        }
 
-        _notificationService.ShowInfo("Daikin FTXM25", $"{mode}\n{temps}");
+        var insideTemp = $"🌡️️ Room temperature is {temp.InsideTemp} °C\n";
+        var outsideTemp = $"🌳 Outside temperature is {temp.OutsideTemp} °C";
+
+        _notificationService.ShowInfo("Daikin FTXM25", $"{status}{insideTemp}{outsideTemp}");
     }
 
     private async Task SmaShowStatus()

@@ -6,7 +6,7 @@
         <ImplicitUsings>disable</ImplicitUsings>
         <UserSecretsId>HomeWizardTray</UserSecretsId>
         <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
-        <AssemblyVersion>1.1.0.0</AssemblyVersion>
+        <AssemblyVersion>1.1.0.1</AssemblyVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
