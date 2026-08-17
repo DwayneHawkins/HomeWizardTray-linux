@@ -190,6 +190,7 @@ internal sealed class DaikinFtxm25DataProvider(HttpClient httpClient, AppSetting
     private async Task SetControlInfo(Dic dic)
     {
         var queryString = string.Join("&", dic.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+        logger.LogInformation("Daikin set_control_info: {Query}", queryString);
         var response = await httpClient.PostAsync($"{_baseUrl}/aircon/set_control_info?{queryString}", null);
         response.EnsureSuccessStatusCode();
     }
@@ -197,6 +198,7 @@ internal sealed class DaikinFtxm25DataProvider(HttpClient httpClient, AppSetting
     private async Task SetSpecialMode(Dic dic)
     {
         var queryString = string.Join("&", dic.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+        logger.LogInformation("Daikin set_special_mode: {Query}", queryString);
         var response = await httpClient.PostAsync($"{_baseUrl}/aircon/set_special_mode?{queryString}", null);
         response.EnsureSuccessStatusCode();
     }
